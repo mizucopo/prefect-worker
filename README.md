@@ -2,10 +2,15 @@
 
 ## Images
 
+The `version` file stores the upstream Prefect image tag used for the base image.
+
 Build the base image first:
 
 ```sh
-docker build -t prefect-worker-base:latest -f images/base/Dockerfile .
+docker build \
+  --build-arg PREFECT_IMAGE_TAG="$(cat version)" \
+  -t prefect-worker-base:latest \
+  -f images/base/Dockerfile .
 ```
 
 Build the process worker image:
