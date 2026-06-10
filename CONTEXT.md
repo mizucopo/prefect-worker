@@ -16,12 +16,32 @@ _Avoid_: process pool
 A Docker image managed by this repository that runs a Prefect Worker for the Process Work Pool.
 _Avoid_: Pool Image
 
+**Worker Image Repository**:
+The Docker Hub repository `mizucopo/prefect-flows`, used as the shared publishing location for Worker Images managed by this repository.
+_Avoid_: image destination, registry
+
 **Base Worker Image**:
 The shared parent image for Worker Images in this repository.
 _Avoid_: base, common image
 
+**Upstream Prefect Image Tag**:
+The Prefect-provided Docker image tag used as the parent image for the Base Worker Image.
+_Avoid_: version
+
+**Worker Image Tag**:
+A Docker tag for a Worker Image that starts with the Upstream Prefect Image Tag and ends with Worker Image-specific qualifiers such as the image variant and optional revision.
+_Avoid_: version tag, custom tag
+
+**Initial Worker Image Tag**:
+A Worker Image Tag without a Worker Image Revision, used for the first publication of a Worker Image for a given Upstream Prefect Image Tag and image variant.
+_Avoid_: latest, unversioned tag
+
+**Worker Image Revision**:
+An optional Worker Image Tag suffix used only when republishing a Worker Image from this repository for the same Upstream Prefect Image Tag and image variant.
+_Avoid_: patch version, Prefect version
+
 **Process Worker Image**:
-The Worker Image that extends the Base Worker Image with Docker CLI access for Wrapper Flows.
+The Worker Image that extends the corresponding Base Worker Image with Docker CLI access for Wrapper Flows.
 _Avoid_: Docker Worker Image
 
 **Role Image**:
