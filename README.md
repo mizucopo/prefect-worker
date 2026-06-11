@@ -3,23 +3,24 @@
 ## イメージ
 
 `version` ファイルには、Base Worker Image で使う Upstream Prefect Image Tag を保存します。
+`revision` ファイルには、Worker Image Revision を保存します。通常リリースでは空にします。
 
 Worker Image は Docker Hub の `mizucopo/prefect-flows` に公開します。
 イメージタグは Upstream Prefect Image Tag を先頭に置き、その後ろに Worker Image の種類を付けます。
 `latest` タグは公開しません。
+
+同じ Upstream Prefect Image Tag と Worker Image の種類に対して修正版を再公開する場合は、`revision` ファイルに Worker Image Revision を設定します。
+
+```sh
+printf "r1\n" > revision
+```
 
 イメージタグ用の変数を設定します。
 
 ```sh
 IMAGE_REPOSITORY="mizucopo/prefect-flows"
 PREFECT_IMAGE_TAG="$(cat version)"
-REVISION=""
-```
-
-同じ Upstream Prefect Image Tag と Worker Image の種類に対して修正版を再公開する場合は、イメージタグを計算する前に `REVISION` を手動で設定します。
-
-```sh
-REVISION="r1"
+REVISION="$(cat revision)"
 ```
 
 イメージタグを計算します。
