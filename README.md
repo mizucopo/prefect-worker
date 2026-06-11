@@ -1,14 +1,14 @@
 # prefect-worker
 
-## Images
+## イメージ
 
-The `version` file stores the upstream Prefect image tag used for the base image.
+`version` ファイルには、Base Worker Image で使う Upstream Prefect Image Tag を保存します。
 
-Worker images are published to Docker Hub under `mizucopo/prefect-flows`.
-Image tags include the upstream Prefect image tag first, followed by the worker image variant.
-Do not publish `latest` tags.
+Worker Image は Docker Hub の `mizucopo/prefect-flows` に公開します。
+イメージタグは Upstream Prefect Image Tag を先頭に置き、その後ろに Worker Image の種類を付けます。
+`latest` タグは公開しません。
 
-Set the image tag variables:
+イメージタグ用の変数を設定します。
 
 ```sh
 IMAGE_REPOSITORY="mizucopo/prefect-flows"
@@ -16,20 +16,20 @@ PREFECT_IMAGE_TAG="$(cat version)"
 REVISION=""
 ```
 
-For a corrected republish of the same upstream Prefect image tag and worker image variant, set `REVISION` manually before calculating the image tags:
+同じ Upstream Prefect Image Tag と Worker Image の種類に対して修正版を再公開する場合は、イメージタグを計算する前に `REVISION` を手動で設定します。
 
 ```sh
 REVISION="r1"
 ```
 
-Calculate the image tags:
+イメージタグを計算します。
 
 ```sh
 BASE_IMAGE_TAG="prefect-${PREFECT_IMAGE_TAG}-base${REVISION:+-${REVISION}}"
 PROCESS_IMAGE_TAG="prefect-${PREFECT_IMAGE_TAG}-process${REVISION:+-${REVISION}}"
 ```
 
-Build the base image first:
+最初に Base Worker Image をビルドします。
 
 ```sh
 docker build \
@@ -38,13 +38,13 @@ docker build \
   -f images/base/Dockerfile .
 ```
 
-Push the base image:
+Base Worker Image を push します。
 
 ```sh
 docker push "${IMAGE_REPOSITORY}:${BASE_IMAGE_TAG}"
 ```
 
-Build the process worker image from the published base image:
+公開済みの Base Worker Image から Process Worker Image をビルドします。
 
 ```sh
 docker build \
@@ -53,7 +53,7 @@ docker build \
   -f images/process/Dockerfile .
 ```
 
-Push the process worker image:
+Process Worker Image を push します。
 
 ```sh
 docker push "${IMAGE_REPOSITORY}:${PROCESS_IMAGE_TAG}"
@@ -61,7 +61,7 @@ docker push "${IMAGE_REPOSITORY}:${PROCESS_IMAGE_TAG}"
 
 ## Compose
 
-Use the published process worker image and mount the host Docker socket:
+公開済みの Process Worker Image を使い、Host Docker Daemon の Docker socket をマウントします。
 
 ```yaml
 prefect-process-worker:
@@ -82,6 +82,6 @@ prefect-process-worker:
   command: sh -c "uv sync --frozen --no-dev && . .venv/bin/activate && prefect worker start --pool process-pool --type process"
 ```
 
-## Architecture Decisions
+## アーキテクチャ決定
 
-- [Worker image tags](docs/adr/0001-worker-image-tags.md)
+- [Worker Image のタグ](docs/adr/0001-worker-image-tags.md)
