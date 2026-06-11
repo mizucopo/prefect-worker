@@ -32,20 +32,20 @@ assert_output_contains() {
 }
 
 : > "$tmp_dir/output"
-run_case "3.7.3-python3.14" ""
-assert_output_contains "release_tag=3.7.3-python3.14"
-assert_output_contains "base_image_tag=3.7.3-python3.14-base"
-assert_output_contains "process_image_tag=3.7.3-python3.14-process"
-assert_output_contains "base_image=mizucopo/prefect-flows:3.7.3-python3.14-base"
-assert_output_contains "process_image=mizucopo/prefect-flows:3.7.3-python3.14-process"
+run_case "3.7.4-python3.14" ""
+assert_output_contains "release_tag=3.7.4-python3.14"
+assert_output_contains "base_image_tag=3.7.4-python3.14-base"
+assert_output_contains "process_image_tag=3.7.4-python3.14-process"
+assert_output_contains "base_image=mizucopo/prefect-flows:3.7.4-python3.14-base"
+assert_output_contains "process_image=mizucopo/prefect-flows:3.7.4-python3.14-process"
 
 : > "$tmp_dir/output"
-run_case "3.7.3-python3.14" "r1"
-assert_output_contains "release_tag=3.7.3-python3.14-r1"
-assert_output_contains "base_image_tag=3.7.3-python3.14-base-r1"
-assert_output_contains "process_image_tag=3.7.3-python3.14-process-r1"
+run_case "3.7.4-python3.14" "r1"
+assert_output_contains "release_tag=3.7.4-python3.14-r1"
+assert_output_contains "base_image_tag=3.7.4-python3.14-base-r1"
+assert_output_contains "process_image_tag=3.7.4-python3.14-process-r1"
 
-printf 'prefect-3.7.3-python3.14\n' > "$tmp_dir/version"
+printf 'prefect-3.7.4-python3.14\n' > "$tmp_dir/version"
 : > "$tmp_dir/revision"
 if (
   cd "$tmp_dir"
