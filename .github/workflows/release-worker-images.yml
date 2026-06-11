@@ -190,7 +190,7 @@ jobs:
           } > release-notes.md
 
           gh release create "${RELEASE_TAG}" \
-            --title "Worker Image Release ${RELEASE_TAG}" \
+            --title "Release ${RELEASE_TAG}" \
             --notes-file release-notes.md \
             --latest=false
 
@@ -287,6 +287,6 @@ jobs:
           } > release-notes.md
 
           gh release create "${RELEASE_TAG}" \
-            --title "Worker Image Release ${RELEASE_TAG}" \
+            --title "Release ${RELEASE_TAG}" \
             --notes-file release-notes.md \
             --latest=false
