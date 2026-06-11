@@ -202,12 +202,26 @@ jobs:
         run: |
           set -euo pipefail
 
+          duplicate_found=false
+
           for image in "${BASE_IMAGE}" "${PROCESS_IMAGE}"; do
-            if docker manifest inspect "${image}" >/dev/null 2>&1; then
+            inspect_output="$(docker manifest inspect "${image}" 2>&1)" && inspect_status=0 || inspect_status=$?
+
+            if [ "${inspect_status}" -eq 0 ]; then
               echo "Docker image tag already exists: ${image}" >&2
-              exit 1
+              duplicate_found=true
+            elif printf '%s' "${inspect_output}" | grep -Eq 'no such manifest|manifest unknown'; then
+              echo "Docker image tag is available: ${image}"
+            else
+              echo "Could not inspect Docker Hub tag: ${image}" >&2
+              printf '%s\n' "${inspect_output}" >&2
+              exit "${inspect_status}"
             fi
           done
+
+          if [ "${duplicate_found}" = "true" ]; then
+            exit 1
+          fi
 
       - name: Build and push Base Worker Image
         if: steps.existing.outputs.tag_exists != 'true'
