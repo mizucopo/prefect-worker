@@ -1,46 +1,69 @@
 # prefect-worker
 
-## イメージ
+Prefect の Process Work Pool 向け Worker Image をビルドし、Docker Hub に公開するためのリポジトリです。
 
-`version` ファイルには、Base Worker Image で使う Upstream Prefect Image Tag を保存します。
-`revision` ファイルには、Worker Image Revision を保存します。通常リリースでは空にします。
+## 管理するもの
 
-Worker Image は Docker Hub の `mizucopo/prefect-flows` に公開します。
-イメージタグは Upstream Prefect Image Tag を先頭に置き、その後ろに Worker Image の種類を付けます。
-`latest` タグは公開しません。
+このリポジトリは、次の Worker Image を Docker Hub の `mizucopo/prefect-flows` に公開します。
 
-同じ Upstream Prefect Image Tag と Worker Image の種類に対して修正版を再公開する場合は、`revision` ファイルに Worker Image Revision を設定します。
+- Base Worker Image: Prefect 公式イメージを親にする共通イメージ
+- Process Worker Image: Base Worker Image に Docker CLI を追加した Process Work Pool 向けイメージ
+
+`latest` タグは公開しません。Worker Image Tag は Upstream Prefect Image Tag、Worker Image の種類、必要に応じて Worker Image Revision から作ります。
+
+## リリースする
+
+通常の Worker Image Release では、`version` に Upstream Prefect Image Tag を書き、`revision` は空にします。
+
+```sh
+printf "3.7.4-python3.14\n" > version
+: > revision
+```
+
+`version` には `prefect-` prefix を付けません。
+
+同じ Upstream Prefect Image Tag と Worker Image の種類に対して修正版を再公開する場合だけ、`revision` に `r1`、`r2` のような Worker Image Revision を書きます。
 
 ```sh
 printf "r1\n" > revision
 ```
 
-## リリース
-
-`main` ブランチで `version`、`revision`、または `.github/workflows/release-worker-images.yml` が更新されると、GitHub Actions が Worker Image Release を作成します。
+`main` ブランチで `version`、`revision`、`scripts/resolve-worker-image-tags.sh`、または `.github/workflows/release-worker-images.yml` が更新されると、GitHub Actions が Worker Image Release を作成します。
 手動で実行する場合も、GitHub Actions の `Release Worker Images` workflow を `main` ブランチから実行します。
 
-workflow は `version` と `revision` から Worker Image Release Tag と Worker Image Tag を計算します。
+## リリースで作られるもの
+
+`version` が `3.7.4-python3.14`、`revision` が空の場合、workflow は次の名前を使います。
+
+| 種類 | 名前 |
+| --- | --- |
+| Worker Image Release Tag | `3.7.4-python3.14` |
+| Base Worker Image | `mizucopo/prefect-flows:3.7.4-python3.14-base` |
+| Process Worker Image | `mizucopo/prefect-flows:3.7.4-python3.14-process` |
+
+`revision` が `r1` の場合は、それぞれの末尾に `-r1` を付けます。
+
+workflow は次の順序でリリースします。
+
+1. Worker Image Release Tag と Worker Image Tag が未使用であることを確認する
+2. Base Worker Image を build して Docker Hub に push する
+3. 公開済みの Base Worker Image から Process Worker Image を build して Docker Hub に push する
+4. annotated git tag を作成する
+5. GitHub Release を作成し、対応する Worker Image の参照を書く
+
+Docker Hub への push には repository secret の `DOCKERHUB_TOKEN` を使います。Docker Hub のユーザー名は `mizucopo` として扱います。
+
+既存の Docker tag や、別 commit を指す既存の Worker Image Release Tag は上書きしません。`main` ブランチ向けの Pull Request では、`Check Worker Image Release` workflow が同じ tag を事前に確認します。いずれかの tag が既に存在する場合、その Pull Request は merge 前に失敗します。
+
+## タグ計算
 
 ```sh
-RELEASE_TAG="prefect-$(cat version)"
-BASE_IMAGE_TAG="prefect-$(cat version)-base"
-PROCESS_IMAGE_TAG="prefect-$(cat version)-process"
+RELEASE_TAG="$(cat version)"
+BASE_IMAGE_TAG="$(cat version)-base"
+PROCESS_IMAGE_TAG="$(cat version)-process"
 ```
 
 `revision` が空でない場合は、それぞれの末尾に `-${revision}` を付けます。
-
-workflow は Base Worker Image と Process Worker Image を Docker Hub に push した後、annotated git tag と GitHub Release を作成します。
-GitHub Release には Docker Hub の `mizucopo/prefect-flows` へのリンクと、対応する Base Worker Image / Process Worker Image の参照を記載します。
-
-Docker Hub への push には repository secret の `DOCKERHUB_TOKEN` を使います。
-Docker Hub のユーザー名は `mizucopo` として扱います。
-
-既存の Docker tag や、別 commit を指す既存の Worker Image Release Tag は上書きしません。
-修正版を再公開する場合は、`revision` を `r1`、`r2` のように更新して新しい Worker Image Release として作成します。
-
-`main` ブランチ向けの Pull Request では、`Check Worker Image Release` workflow が同じ tag を事前に確認します。
-Worker Image Release Tag、Base Worker Image Tag、Process Worker Image Tag のいずれかが既に存在する場合、その Pull Request は merge 前に失敗します。
 
 ## 手動ビルド
 
@@ -55,8 +78,8 @@ REVISION="$(cat revision)"
 イメージタグを計算します。
 
 ```sh
-BASE_IMAGE_TAG="prefect-${PREFECT_IMAGE_TAG}-base${REVISION:+-${REVISION}}"
-PROCESS_IMAGE_TAG="prefect-${PREFECT_IMAGE_TAG}-process${REVISION:+-${REVISION}}"
+BASE_IMAGE_TAG="${PREFECT_IMAGE_TAG}-base${REVISION:+-${REVISION}}"
+PROCESS_IMAGE_TAG="${PREFECT_IMAGE_TAG}-process${REVISION:+-${REVISION}}"
 ```
 
 最初に Base Worker Image をビルドします。
@@ -95,7 +118,7 @@ docker push "${IMAGE_REPOSITORY}:${PROCESS_IMAGE_TAG}"
 
 ```yaml
 prefect-process-worker:
-  image: "mizucopo/prefect-flows:prefect-3.7.3-python3.14-process"
+  image: "mizucopo/prefect-flows:3.7.4-python3.14-process"
   restart: unless-stopped
   container_name: prefect-process-worker
   networks:

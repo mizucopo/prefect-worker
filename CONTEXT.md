@@ -29,7 +29,7 @@ The Prefect-provided Docker image tag used as the parent image for the Base Work
 _Avoid_: version
 
 **Worker Image Tag**:
-A Docker tag for a Worker Image that starts with the Upstream Prefect Image Tag and ends with Worker Image-specific qualifiers such as the image variant and optional revision.
+A Docker tag for a Worker Image that starts with the Upstream Prefect Image Tag without an additional repository-local product prefix, and ends with Worker Image-specific qualifiers such as the image variant and optional revision.
 _Avoid_: version tag, custom tag
 
 **Initial Worker Image Tag**:
@@ -45,7 +45,7 @@ The publication of the Base Worker Image and Process Worker Image for one Upstre
 _Avoid_: Docker release, version release
 
 **Worker Image Release Tag**:
-A git tag that marks the repository commit for a specific Upstream Prefect Image Tag and optional Worker Image Revision.
+A git tag that marks the repository commit for a specific Upstream Prefect Image Tag and optional Worker Image Revision, using the same tag base as the Worker Image Tags.
 _Avoid_: version tag, image tag
 
 **Process Worker Image**:
