@@ -44,8 +44,7 @@ jobs:
 
       - name: Resolve release tags
         id: tags
-        run: |
-          scripts/resolve-worker-image-tags.sh
+        run: scripts/resolve-worker-image-tags.sh
 
       - name: Inspect existing git tag and release
         id: existing

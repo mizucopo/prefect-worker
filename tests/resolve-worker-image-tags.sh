@@ -2,6 +2,8 @@
 set -eu
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+script_path="$repo_root/scripts/resolve-worker-image-tags.sh"
+image_repository="mizucopo/prefect-flows"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
@@ -14,9 +16,9 @@ run_case() {
 
   (
     cd "$tmp_dir"
-    IMAGE_REPOSITORY=mizucopo/prefect-flows \
+    IMAGE_REPOSITORY="$image_repository" \
       GITHUB_OUTPUT="$tmp_dir/output" \
-      bash "$repo_root/scripts/resolve-worker-image-tags.sh"
+      bash "$script_path"
   )
 }
 
@@ -36,8 +38,8 @@ run_case "3.7.3-python3.14" ""
 assert_output_contains "release_tag=3.7.3-python3.14"
 assert_output_contains "base_image_tag=3.7.3-python3.14-base"
 assert_output_contains "process_image_tag=3.7.3-python3.14-process"
-assert_output_contains "base_image=mizucopo/prefect-flows:3.7.3-python3.14-base"
-assert_output_contains "process_image=mizucopo/prefect-flows:3.7.3-python3.14-process"
+assert_output_contains "base_image=$image_repository:3.7.3-python3.14-base"
+assert_output_contains "process_image=$image_repository:3.7.3-python3.14-process"
 
 : > "$tmp_dir/output"
 run_case "3.7.3-python3.14" "r1"
@@ -49,9 +51,9 @@ printf 'prefect-3.7.3-python3.14\n' > "$tmp_dir/version"
 : > "$tmp_dir/revision"
 if (
   cd "$tmp_dir"
-  IMAGE_REPOSITORY=mizucopo/prefect-flows \
+  IMAGE_REPOSITORY="$image_repository" \
     GITHUB_OUTPUT="$tmp_dir/output" \
-    bash "$repo_root/scripts/resolve-worker-image-tags.sh"
+    bash "$script_path"
 ) 2> "$tmp_dir/error"; then
   echo "Expected prefect-prefixed version to fail." >&2
   exit 1
