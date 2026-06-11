@@ -39,6 +39,9 @@ Docker Hub のユーザー名は `mizucopo` として扱います。
 既存の Docker tag や、別 commit を指す既存の Worker Image Release Tag は上書きしません。
 修正版を再公開する場合は、`revision` を `r1`、`r2` のように更新して新しい Worker Image Release として作成します。
 
+`main` ブランチ向けの Pull Request では、`Check Worker Image Release` workflow が同じ tag を事前に確認します。
+Worker Image Release Tag、Base Worker Image Tag、Process Worker Image Tag のいずれかが既に存在する場合、その Pull Request は merge 前に失敗します。
+
 ## 手動ビルド
 
 イメージタグ用の変数を設定します。
