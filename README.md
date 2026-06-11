@@ -28,7 +28,7 @@ printf "3.7.3-python3.14\n" > version
 printf "r1\n" > revision
 ```
 
-`main` ブランチで `version`、`revision`、または `.github/workflows/release-worker-images.yml` が更新されると、GitHub Actions が Worker Image Release を作成します。
+`main` ブランチで `version`、`revision`、`scripts/resolve-worker-image-tags.sh`、または `.github/workflows/release-worker-images.yml` が更新されると、GitHub Actions が Worker Image Release を作成します。
 手動で実行する場合も、GitHub Actions の `Release Worker Images` workflow を `main` ブランチから実行します。
 
 ## リリースで作られるもの
@@ -37,9 +37,9 @@ printf "r1\n" > revision
 
 | 種類 | 名前 |
 | --- | --- |
-| Worker Image Release Tag | `prefect-3.7.3-python3.14` |
-| Base Worker Image | `mizucopo/prefect-flows:prefect-3.7.3-python3.14-base` |
-| Process Worker Image | `mizucopo/prefect-flows:prefect-3.7.3-python3.14-process` |
+| Worker Image Release Tag | `3.7.3-python3.14` |
+| Base Worker Image | `mizucopo/prefect-flows:3.7.3-python3.14-base` |
+| Process Worker Image | `mizucopo/prefect-flows:3.7.3-python3.14-process` |
 
 `revision` が `r1` の場合は、それぞれの末尾に `-r1` を付けます。
 
@@ -58,9 +58,9 @@ Docker Hub への push には repository secret の `DOCKERHUB_TOKEN` を使い�
 ## タグ計算
 
 ```sh
-RELEASE_TAG="prefect-$(cat version)"
-BASE_IMAGE_TAG="prefect-$(cat version)-base"
-PROCESS_IMAGE_TAG="prefect-$(cat version)-process"
+RELEASE_TAG="$(cat version)"
+BASE_IMAGE_TAG="$(cat version)-base"
+PROCESS_IMAGE_TAG="$(cat version)-process"
 ```
 
 `revision` が空でない場合は、それぞれの末尾に `-${revision}` を付けます。
@@ -78,8 +78,8 @@ REVISION="$(cat revision)"
 イメージタグを計算します。
 
 ```sh
-BASE_IMAGE_TAG="prefect-${PREFECT_IMAGE_TAG}-base${REVISION:+-${REVISION}}"
-PROCESS_IMAGE_TAG="prefect-${PREFECT_IMAGE_TAG}-process${REVISION:+-${REVISION}}"
+BASE_IMAGE_TAG="${PREFECT_IMAGE_TAG}-base${REVISION:+-${REVISION}}"
+PROCESS_IMAGE_TAG="${PREFECT_IMAGE_TAG}-process${REVISION:+-${REVISION}}"
 ```
 
 最初に Base Worker Image をビルドします。
@@ -118,7 +118,7 @@ docker push "${IMAGE_REPOSITORY}:${PROCESS_IMAGE_TAG}"
 
 ```yaml
 prefect-process-worker:
-  image: "mizucopo/prefect-flows:prefect-3.7.3-python3.14-process"
+  image: "mizucopo/prefect-flows:3.7.3-python3.14-process"
   restart: unless-stopped
   container_name: prefect-process-worker
   networks:
