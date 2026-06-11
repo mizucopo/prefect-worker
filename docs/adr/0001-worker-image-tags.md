@@ -1,0 +1,3 @@
+# Worker image tags
+
+Worker Images are published to the Docker Hub repository `mizucopo/prefect-flows`, with Base Worker Images and Process Worker Images distinguished by tag suffixes instead of separate repositories. Tags start with the Upstream Prefect Image Tag and end with the Worker Image variant, such as `prefect-3.7.3-python3.14-base` and `prefect-3.7.3-python3.14-process`; corrected republishes for the same upstream tag and variant add an explicit repository-local revision suffix such as `-r1`. We do not publish `latest` tags because deployments should identify the exact upstream Prefect image tag and Worker Image variant they run, and corrected republishes should be opted into explicitly.
