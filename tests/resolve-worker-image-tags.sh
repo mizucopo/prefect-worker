@@ -4,6 +4,7 @@ set -eu
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 script_path="$repo_root/scripts/resolve-worker-image-tags.sh"
 image_repository="mizucopo/prefect-flows"
+version_tag="3.7.3-python3.14"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
@@ -34,20 +35,20 @@ assert_output_contains() {
 }
 
 : > "$tmp_dir/output"
-run_case "3.7.3-python3.14" ""
-assert_output_contains "release_tag=3.7.3-python3.14"
-assert_output_contains "base_image_tag=3.7.3-python3.14-base"
-assert_output_contains "process_image_tag=3.7.3-python3.14-process"
-assert_output_contains "base_image=$image_repository:3.7.3-python3.14-base"
-assert_output_contains "process_image=$image_repository:3.7.3-python3.14-process"
+run_case "$version_tag" ""
+assert_output_contains "release_tag=$version_tag"
+assert_output_contains "base_image_tag=$version_tag-base"
+assert_output_contains "process_image_tag=$version_tag-process"
+assert_output_contains "base_image=$image_repository:$version_tag-base"
+assert_output_contains "process_image=$image_repository:$version_tag-process"
 
 : > "$tmp_dir/output"
-run_case "3.7.3-python3.14" "r1"
-assert_output_contains "release_tag=3.7.3-python3.14-r1"
-assert_output_contains "base_image_tag=3.7.3-python3.14-base-r1"
-assert_output_contains "process_image_tag=3.7.3-python3.14-process-r1"
+run_case "$version_tag" "r1"
+assert_output_contains "release_tag=$version_tag-r1"
+assert_output_contains "base_image_tag=$version_tag-base-r1"
+assert_output_contains "process_image_tag=$version_tag-process-r1"
 
-printf 'prefect-3.7.3-python3.14\n' > "$tmp_dir/version"
+printf 'prefect-%s\n' "$version_tag" > "$tmp_dir/version"
 : > "$tmp_dir/revision"
 if (
   cd "$tmp_dir"
