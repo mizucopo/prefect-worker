@@ -1,5 +1,7 @@
 # prefect-worker
 
+Prefect の Process Work Pool 向け Worker Image をビルドし、Docker Hub に公開するためのリポジトリです。
+
 ## イメージ
 
 `version` ファイルには、Base Worker Image で使う Upstream Prefect Image Tag を保存します。
