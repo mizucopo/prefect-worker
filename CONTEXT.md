@@ -40,6 +40,14 @@ _Avoid_: latest, unversioned tag
 An optional Worker Image Tag suffix used only when republishing a Worker Image from this repository for the same Upstream Prefect Image Tag and image variant.
 _Avoid_: patch version, Prefect version
 
+**Worker Image Release**:
+The publication of the Base Worker Image and Process Worker Image for one Upstream Prefect Image Tag and optional Worker Image Revision.
+_Avoid_: Docker release, version release
+
+**Worker Image Release Tag**:
+A git tag that marks the repository commit for a specific Upstream Prefect Image Tag and optional Worker Image Revision.
+_Avoid_: version tag, image tag
+
 **Process Worker Image**:
 The Worker Image that extends the corresponding Base Worker Image with Docker CLI access for Wrapper Flows.
 _Avoid_: Docker Worker Image
