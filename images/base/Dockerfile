@@ -1,2 +1,3 @@
-FROM prefecthq/prefect:3.7.3-python3.14
-
+# check=skip=InvalidDefaultArgInFrom
+ARG PREFECT_IMAGE_TAG
+FROM prefecthq/prefect:${PREFECT_IMAGE_TAG}

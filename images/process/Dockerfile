@@ -1,4 +1,5 @@
-ARG BASE_IMAGE=prefect-worker-base:latest
+# check=skip=InvalidDefaultArgInFrom
+ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 ARG DEBIAN_FRONTEND=noninteractive

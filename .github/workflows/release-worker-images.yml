@@ -1,0 +1,292 @@
+name: Release Worker Images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - version
+      - revision
+      - .github/workflows/release-worker-images.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-worker-images-main
+  cancel-in-progress: false
+
+env:
+  IMAGE_REPOSITORY: mizucopo/prefect-flows
+  DOCKERHUB_USERNAME: mizucopo
+  DOCKERHUB_URL: https://hub.docker.com/r/mizucopo/prefect-flows
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Require main
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "This workflow can only release from main." >&2
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release tags
+        id: tags
+        run: |
+          set -euo pipefail
+
+          prefect_image_tag_raw="$(cat version)"
+          revision_raw="$(cat revision)"
+
+          case "${prefect_image_tag_raw}" in
+            *$'\n'*)
+              echo "version must contain exactly one line." >&2
+              exit 1
+              ;;
+          esac
+
+          case "${revision_raw}" in
+            *$'\n'*)
+              echo "revision must contain at most one line." >&2
+              exit 1
+              ;;
+          esac
+
+          prefect_image_tag="$(printf '%s' "${prefect_image_tag_raw}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          revision="$(printf '%s' "${revision_raw}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+
+          if [ -z "${prefect_image_tag}" ]; then
+            echo "version must not be empty." >&2
+            exit 1
+          fi
+
+          if [[ "${prefect_image_tag}" == prefect-* ]]; then
+            echo "version must contain the Upstream Prefect Image Tag without a prefect- prefix." >&2
+            exit 1
+          fi
+
+          if [[ ! "${prefect_image_tag}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+            echo "version contains characters that are not valid for this release tag." >&2
+            exit 1
+          fi
+
+          if [ -n "${revision}" ] && [[ ! "${revision}" =~ ^r[0-9]+$ ]]; then
+            echo "revision must be empty or match r[0-9]+." >&2
+            exit 1
+          fi
+
+          release_tag="prefect-${prefect_image_tag}"
+          base_image_tag="prefect-${prefect_image_tag}-base"
+          process_image_tag="prefect-${prefect_image_tag}-process"
+
+          if [ -n "${revision}" ]; then
+            release_tag="${release_tag}-${revision}"
+            base_image_tag="${base_image_tag}-${revision}"
+            process_image_tag="${process_image_tag}-${revision}"
+          fi
+
+          {
+            echo "prefect_image_tag=${prefect_image_tag}"
+            echo "revision=${revision}"
+            echo "release_tag=${release_tag}"
+            echo "base_image_tag=${base_image_tag}"
+            echo "process_image_tag=${process_image_tag}"
+            echo "base_image=${IMAGE_REPOSITORY}:${base_image_tag}"
+            echo "process_image=${IMAGE_REPOSITORY}:${process_image_tag}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Inspect existing git tag and release
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.tags.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          git fetch --force --tags
+
+          tag_exists=false
+          release_exists=false
+
+          if git rev-parse --verify --quiet "refs/tags/${RELEASE_TAG}" >/dev/null; then
+            tag_exists=true
+            tag_commit="$(git rev-list -n 1 "${RELEASE_TAG}")"
+
+            if [ "${tag_commit}" != "${GITHUB_SHA}" ]; then
+              echo "Tag ${RELEASE_TAG} already exists at ${tag_commit}, not ${GITHUB_SHA}." >&2
+              exit 1
+            fi
+          fi
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            release_exists=true
+          fi
+
+          if [ "${release_exists}" = "true" ] && [ "${tag_exists}" != "true" ]; then
+            echo "Release ${RELEASE_TAG} exists, but the matching git tag was not found." >&2
+            exit 1
+          fi
+
+          {
+            echo "tag_exists=${tag_exists}"
+            echo "release_exists=${release_exists}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Stop if release already exists
+        if: steps.existing.outputs.tag_exists == 'true' && steps.existing.outputs.release_exists == 'true'
+        run: |
+          set -euo pipefail
+
+          echo "Release ${{ steps.tags.outputs.release_tag }} already exists for this commit."
+
+      - name: Login to Docker Hub
+        if: steps.existing.outputs.tag_exists != 'true' || steps.existing.outputs.release_exists != 'true'
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DOCKERHUB_TOKEN}" ]; then
+            echo "DOCKERHUB_TOKEN is required." >&2
+            exit 1
+          fi
+
+          printf '%s' "${DOCKERHUB_TOKEN}" \
+            | docker login --username "${DOCKERHUB_USERNAME}" --password-stdin
+
+      - name: Create missing release for existing tag
+        if: steps.existing.outputs.tag_exists == 'true' && steps.existing.outputs.release_exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.tags.outputs.release_tag }}
+          BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
+          PROCESS_IMAGE: ${{ steps.tags.outputs.process_image }}
+        run: |
+          set -euo pipefail
+
+          docker manifest inspect "${BASE_IMAGE}" >/dev/null
+          docker manifest inspect "${PROCESS_IMAGE}" >/dev/null
+
+          {
+            echo "## Worker Images"
+            echo
+            echo "この GitHub Release に対応する Worker Image です。"
+            echo
+            echo "- Base Worker Image: \`${BASE_IMAGE}\`"
+            echo "- Process Worker Image: \`${PROCESS_IMAGE}\`"
+            echo
+            echo "Docker Hub: ${DOCKERHUB_URL}"
+          } > release-notes.md
+
+          gh release create "${RELEASE_TAG}" \
+            --title "Worker Image Release ${RELEASE_TAG}" \
+            --notes-file release-notes.md \
+            --latest=false
+
+      - name: Check Docker Hub tags
+        if: steps.existing.outputs.tag_exists != 'true'
+        env:
+          BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
+          PROCESS_IMAGE: ${{ steps.tags.outputs.process_image }}
+        run: |
+          set -euo pipefail
+
+          duplicate_found=false
+
+          for image in "${BASE_IMAGE}" "${PROCESS_IMAGE}"; do
+            inspect_output="$(docker manifest inspect "${image}" 2>&1)" && inspect_status=0 || inspect_status=$?
+
+            if [ "${inspect_status}" -eq 0 ]; then
+              echo "Docker image tag already exists: ${image}" >&2
+              duplicate_found=true
+            elif printf '%s' "${inspect_output}" | grep -Eq 'no such manifest|manifest unknown'; then
+              echo "Docker image tag is available: ${image}"
+            else
+              echo "Could not inspect Docker Hub tag: ${image}" >&2
+              printf '%s\n' "${inspect_output}" >&2
+              exit "${inspect_status}"
+            fi
+          done
+
+          if [ "${duplicate_found}" = "true" ]; then
+            exit 1
+          fi
+
+      - name: Build and push Base Worker Image
+        if: steps.existing.outputs.tag_exists != 'true'
+        env:
+          BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
+          PREFECT_IMAGE_TAG: ${{ steps.tags.outputs.prefect_image_tag }}
+        run: |
+          set -euo pipefail
+
+          docker build \
+            --build-arg PREFECT_IMAGE_TAG="${PREFECT_IMAGE_TAG}" \
+            -t "${BASE_IMAGE}" \
+            -f images/base/Dockerfile .
+
+          docker push "${BASE_IMAGE}"
+
+      - name: Build and push Process Worker Image
+        if: steps.existing.outputs.tag_exists != 'true'
+        env:
+          BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
+          PROCESS_IMAGE: ${{ steps.tags.outputs.process_image }}
+        run: |
+          set -euo pipefail
+
+          docker build \
+            --build-arg BASE_IMAGE="${BASE_IMAGE}" \
+            -t "${PROCESS_IMAGE}" \
+            -f images/process/Dockerfile .
+
+          docker push "${PROCESS_IMAGE}"
+
+      - name: Create annotated git tag
+        if: steps.existing.outputs.tag_exists != 'true'
+        env:
+          RELEASE_TAG: ${{ steps.tags.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${RELEASE_TAG}" -m "Worker Image Release ${RELEASE_TAG}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${RELEASE_TAG}"
+
+      - name: Create GitHub Release
+        if: steps.existing.outputs.tag_exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.tags.outputs.release_tag }}
+          BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
+          PROCESS_IMAGE: ${{ steps.tags.outputs.process_image }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Worker Images"
+            echo
+            echo "この GitHub Release に対応する Worker Image です。"
+            echo
+            echo "- Base Worker Image: \`${BASE_IMAGE}\`"
+            echo "- Process Worker Image: \`${PROCESS_IMAGE}\`"
+            echo
+            echo "Docker Hub: ${DOCKERHUB_URL}"
+          } > release-notes.md
+
+          gh release create "${RELEASE_TAG}" \
+            --title "Worker Image Release ${RELEASE_TAG}" \
+            --notes-file release-notes.md \
+            --latest=false
