@@ -29,8 +29,7 @@ jobs:
 
       - name: Resolve release tags
         id: tags
-        run: |
-          scripts/resolve-worker-image-tags.sh
+        run: scripts/resolve-worker-image-tags.sh
 
       - name: Check git tag
         env:
