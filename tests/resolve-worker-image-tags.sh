@@ -4,7 +4,7 @@ set -eu
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 script_path="$repo_root/scripts/resolve-worker-image-tags.sh"
 image_repository="mizucopo/prefect-flows"
-version_tag="3.7.3-python3.14"
+version_tag="3.7.4-python3.14"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
