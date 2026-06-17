@@ -6,7 +6,7 @@ Prefect の Process Work Pool 向け Worker Image をビルドし、Docker Hub �
 
 このリポジトリは、次の Worker Image を Docker Hub の `mizucopo/prefect-flows` に公開します。
 
-- Base Worker Image: Prefect 公式イメージを親にし、`gzip` コマンドを PATH から直接実行できる共通イメージ
+- Base Worker Image: Prefect 公式イメージを親にし、`gzip` コマンドと PostgreSQL 16/17/18 のクライアントツールを実行できる共通イメージ
 - Process Worker Image: Base Worker Image に Docker CLI を追加した Process Work Pool 向けイメージ
 
 `latest` タグは公開しません。Worker Image Tag は Upstream Prefect Image Tag、Worker Image の種類、必要に応じて Worker Image Revision から作ります。
@@ -98,6 +98,14 @@ docker push "${IMAGE_REPOSITORY}:${BASE_IMAGE_TAG}"
 ```
 
 Base Worker Image では、コンテナ内で `gzip` を PATH から直接実行できます。
+
+また、PostgreSQL 16/17/18 のクライアントツールを versioned path から実行できます。複数 version を同居させるため、PostgreSQL クライアントを使う Flow では次のパスを指定します。
+
+| PostgreSQL | `psql` | `pg_dumpall` | `pg_dump` |
+| --- | --- | --- | --- |
+| 16 | `/usr/lib/postgresql/16/bin/psql` | `/usr/lib/postgresql/16/bin/pg_dumpall` | `/usr/lib/postgresql/16/bin/pg_dump` |
+| 17 | `/usr/lib/postgresql/17/bin/psql` | `/usr/lib/postgresql/17/bin/pg_dumpall` | `/usr/lib/postgresql/17/bin/pg_dump` |
+| 18 | `/usr/lib/postgresql/18/bin/psql` | `/usr/lib/postgresql/18/bin/pg_dumpall` | `/usr/lib/postgresql/18/bin/pg_dump` |
 
 公開済みの Base Worker Image から Process Worker Image をビルドします。
 
