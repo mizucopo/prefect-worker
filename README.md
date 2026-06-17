@@ -6,7 +6,7 @@ Prefect の Process Work Pool 向け Worker Image をビルドし、Docker Hub �
 
 このリポジトリは、次の Worker Image を Docker Hub の `mizucopo/prefect-flows` に公開します。
 
-- Base Worker Image: Prefect 公式イメージを親にする共通イメージ
+- Base Worker Image: Prefect 公式イメージを親にし、`gzip` コマンドを PATH から直接実行できる共通イメージ
 - Process Worker Image: Base Worker Image に Docker CLI を追加した Process Work Pool 向けイメージ
 
 `latest` タグは公開しません。Worker Image Tag は Upstream Prefect Image Tag、Worker Image の種類、必要に応じて Worker Image Revision から作ります。
@@ -28,7 +28,7 @@ printf "3.7.4-python3.14\n" > version
 printf "r1\n" > revision
 ```
 
-`main` ブランチで `version`、`revision`、`scripts/resolve-worker-image-tags.sh`、または `.github/workflows/release-worker-images.yml` が更新されると、GitHub Actions が Worker Image Release を作成します。
+`main` ブランチで `version`、`revision`、`images/base/Dockerfile`、`images/process/Dockerfile`、`scripts/resolve-worker-image-tags.sh`、または `.github/workflows/release-worker-images.yml` が更新されると、GitHub Actions が Worker Image Release を作成します。
 手動で実行する場合も、GitHub Actions の `Release Worker Images` workflow を `main` ブランチから実行します。
 
 ## リリースで作られるもの
@@ -96,6 +96,8 @@ Base Worker Image を push します。
 ```sh
 docker push "${IMAGE_REPOSITORY}:${BASE_IMAGE_TAG}"
 ```
+
+Base Worker Image では、コンテナ内で `gzip` を PATH から直接実行できます。
 
 公開済みの Base Worker Image から Process Worker Image をビルドします。
 
