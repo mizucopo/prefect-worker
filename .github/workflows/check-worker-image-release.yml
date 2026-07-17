@@ -44,7 +44,7 @@ jobs:
             .github/workflows/release-worker-images.yml
           )
 
-          if git diff --quiet "${BASE_SHA}" "${HEAD_SHA}" -- "${release_inputs[@]}"; then
+          if git diff --quiet "${BASE_SHA}...${HEAD_SHA}" -- "${release_inputs[@]}"; then
             release_changes=false
           else
             diff_status=$?
