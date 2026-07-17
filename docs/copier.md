@@ -16,7 +16,7 @@
 3. 生成差分をファイルごとに確認し、後述の固有差分を保持する
 4. shell test、workflow lint、Docker build など適用可能な検証を実行する
 
-強制的な `copier recopy` は、`version` や Dependabot 設定などの固有差分を上書きするため、通常の更新には使いません。最新テンプレートの素の生成結果を確認する場合は、一時ディレクトリへ `copier copy` して比較します。
+強制的な `copier recopy` は、`version` などの固有差分を上書きするため、通常の更新には使いません。最新テンプレートの素の生成結果を確認する場合は、一時ディレクトリへ `copier copy` して比較します。
 
 ## メタデータ
 
@@ -37,6 +37,7 @@
 | `use_aws_ecr` | `false` | 正しい。配布先は AWS ECR ではなく Docker Hub |
 | `use_chrome_extension` | `false` | 正しい。Chrome Extension のsource、package、buildは存在しない |
 | `use_docker` | `true` | 正しい。このリポジトリの主要成果物は2種類の Docker image |
+| `use_dependabot_docker` | `false` | 正しい。Dockerfileの `FROM` imageをbuild `ARG` で指定しており、Docker Dependabotの更新対象にならない |
 | `use_gh_actions_docker_release` | `false` | 正しい。テンプレート標準は単一imageと `latest` tagを前提とするため、2種類のimmutableなWorker Imageを扱う固有workflowには適用できない |
 | `use_gh_actions_pr_tag_check` | `false` | 正しい。Worker Image Release Tagと2種類のDocker tagを検査する固有workflowを使う |
 | `use_gh_actions_release` | `false` | 正しい。Docker image公開後にGitHub Releaseを作る固有workflowを使う |
@@ -57,16 +58,16 @@
 - `.gitignore` は、最新テンプレートが追加したRust、Node.js、coverageの共通ignoreを採用する
 - `.copier-answers.yml` は、新しいruntime回答の明示的な `false` と最新 `_commit` を記録する
 - 使われなくなった `docker_image_name: prefect-worker` は、実際のrepository名 `prefect-flows` に直す
+- `.github/dependabot.yml` のDocker監視はbuild `ARG` 経由のimageを更新できず、GitHub Actions監視もテンプレート外の独自差分だったため削除する
 
 ### `repo-template` 側へ汎用化する共通変更
 
-最新テンプレートのDependabot生成は、`use_docker: true` のDocker監視directoryを `/` に固定し、テンプレートが生成するworkflowが有効な場合だけGitHub Actions監視を追加します。このリポジトリのようにDockerfileを複数のsubdirectoryへ置き、固有workflowを持つ構成を表現できません。
+Docker利用とDocker Dependabot監視を分離する共通変更は、[`repo-template` Issue #31](https://github.com/mizucopo/repo-template/issues/31) と [PR #32](https://github.com/mizucopo/repo-template/pull/32) で解消しました。このリポジトリは `use_docker: true` と `use_dependabot_docker: false` を併用し、Docker関連ファイルを維持したまま動作しない監視を生成しません。
 
-`repo-template` 側では、次を別のフォローアップとして扱います。
+残る共通変更は、次のフォローアップとして `repo-template` 側で扱います。
 
-- Docker監視directoryを複数指定でき、既定値を `/` とするtemplate optionを追加する
 - テンプレート外のGitHub Actions workflowを使うリポジトリでも、GitHub Actions監視を選択できるようにする
-- ルートと複数subdirectoryの生成結果を `template_tests/test_template.py` で検証する
+- 独立したGitHub Actions監視optionの有効・無効と、他ecosystemとの併用を `template_tests/test_template.py` で検証する
 
 テンプレートに未実装の回答値は、このリポジトリの `.copier-answers.yml` へ先行追加しません。
 
@@ -76,5 +77,4 @@
 - `revision` は同じUpstream Prefect Image Tagを再公開する場合だけ使うWorker Image Revisionを保持する。テンプレート標準releaseに同じ概念はない
 - `.github/workflows/check-worker-image-release.yml` はgit tagと2種類のDocker Hub tagをmerge前に検査する
 - `.github/workflows/release-worker-images.yml` はBase Worker Imageを先に公開し、それを親にProcess Worker Imageを公開してからgit tagとGitHub Releaseを作る
-- `.github/dependabot.yml` は実際のDockerfile配置である `/images/base` と `/images/process`、および固有workflowのGitHub Actionsを監視する。現在のtemplate optionではこの配置を表現できない
 - `images/`、`scripts/`、`tests/`、`README.md`、`CONTEXT.md`、`docs/adr/` はWorker Imageの機能、用語、検証、設計判断を管理するため、汎用テンプレートへ統合しない

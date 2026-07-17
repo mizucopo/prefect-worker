@@ -9,6 +9,13 @@ on:
       - synchronize
       - reopened
       - edited
+    paths:
+      - version
+      - revision
+      - images/base/Dockerfile
+      - images/process/Dockerfile
+      - scripts/resolve-worker-image-tags.sh
+      - .github/workflows/release-worker-images.yml
 
 permissions:
   contents: read

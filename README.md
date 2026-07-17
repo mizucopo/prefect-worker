@@ -31,6 +31,7 @@ printf "r1\n" > revision
 ```
 
 `main` ブランチで `version`、`revision`、`images/base/Dockerfile`、`images/process/Dockerfile`、`scripts/resolve-worker-image-tags.sh`、または `.github/workflows/release-worker-images.yml` が更新されると、GitHub Actions が Worker Image Release を作成します。
+Pull Requestでは同じファイルが変更された場合だけ、予定するgit tagとDocker Hub tagが未使用かを検査します。リリース対象を変更しない文書や設定だけのPull Requestでは、この重複検査を実行しません。
 手動で実行する場合も、GitHub Actions の `Release Worker Images` workflow を `main` ブランチから実行します。
 
 ## リリースで作られるもの
