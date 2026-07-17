@@ -5,6 +5,7 @@ docker_image_name: prefect-flows
 docker_registry: mizucopo
 use_aws_ecr: false
 use_chrome_extension: false
+use_dependabot_docker: false
 use_docker: true
 use_gh_actions_docker_release: false
 use_gh_actions_pr_tag_check: false
