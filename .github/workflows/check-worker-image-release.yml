@@ -9,13 +9,6 @@ on:
       - synchronize
       - reopened
       - edited
-    paths:
-      - version
-      - revision
-      - images/base/Dockerfile
-      - images/process/Dockerfile
-      - scripts/resolve-worker-image-tags.sh
-      - .github/workflows/release-worker-images.yml
 
 permissions:
   contents: read
@@ -34,11 +27,48 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Detect release-triggering changes
+        id: release_changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          release_inputs=(
+            version
+            revision
+            images/base/Dockerfile
+            images/process/Dockerfile
+            scripts/resolve-worker-image-tags.sh
+            .github/workflows/release-worker-images.yml
+          )
+
+          if git diff --quiet "${BASE_SHA}" "${HEAD_SHA}" -- "${release_inputs[@]}"; then
+            release_changes=false
+          else
+            diff_status=$?
+
+            if [ "${diff_status}" -ne 1 ]; then
+              exit "${diff_status}"
+            fi
+
+            release_changes=true
+          fi
+
+          echo "release_changes=${release_changes}" >> "${GITHUB_OUTPUT}"
+
+      - name: Report no release changes
+        if: steps.release_changes.outputs.release_changes != 'true'
+        run: echo "No release-triggering files changed; skipping duplicate tag checks."
+
       - name: Resolve release tags
+        if: steps.release_changes.outputs.release_changes == 'true'
         id: tags
         run: scripts/resolve-worker-image-tags.sh
 
       - name: Check git tag
+        if: steps.release_changes.outputs.release_changes == 'true'
         env:
           RELEASE_TAG: ${{ steps.tags.outputs.release_tag }}
         run: |
@@ -53,6 +83,7 @@ jobs:
           fi
 
       - name: Check Docker Hub tags
+        if: steps.release_changes.outputs.release_changes == 'true'
         env:
           BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
           PROCESS_IMAGE: ${{ steps.tags.outputs.process_image }}
@@ -82,6 +113,7 @@ jobs:
           fi
 
       - name: Report release tags
+        if: steps.release_changes.outputs.release_changes == 'true'
         env:
           RELEASE_TAG: ${{ steps.tags.outputs.release_tag }}
           BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
