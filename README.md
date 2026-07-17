@@ -11,6 +11,8 @@ Prefect の Process Work Pool 向け Worker Image をビルドし、Docker Hub �
 
 `latest` タグは公開しません。Worker Image Tag は Upstream Prefect Image Tag、Worker Image の種類、必要に応じて Worker Image Revision から作ります。
 
+Copier の回答値、テンプレートとの差分、安全な更新手順は [Copier運用](docs/copier.md) に記録しています。
+
 ## リリースする
 
 通常の Worker Image Release では、`version` に Upstream Prefect Image Tag を書き、`revision` は空にします。
