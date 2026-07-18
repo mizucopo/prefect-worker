@@ -17,7 +17,7 @@ A Docker image managed by this repository that runs a Prefect Worker for the Pro
 _Avoid_: Pool Image
 
 **Worker Image Repository**:
-The Docker Hub repository `mizucopo/prefect-flows`, used as the shared publishing location for Worker Images managed by this repository.
+The Docker Hub repository `mizucopo/prefect-worker`, used as the shared publishing location for Worker Images managed by this repository.
 _Avoid_: image destination, registry
 
 **Base Worker Image**:

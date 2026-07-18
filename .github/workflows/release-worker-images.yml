@@ -21,9 +21,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE_REPOSITORY: mizucopo/prefect-flows
+  IMAGE_REPOSITORY: mizucopo/prefect-worker
   DOCKERHUB_USERNAME: mizucopo
-  DOCKERHUB_URL: https://hub.docker.com/r/mizucopo/prefect-flows
+  DOCKERHUB_URL: https://hub.docker.com/r/mizucopo/prefect-worker
 
 jobs:
   release:

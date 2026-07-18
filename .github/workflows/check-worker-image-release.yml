@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE_REPOSITORY: mizucopo/prefect-flows
+  IMAGE_REPOSITORY: mizucopo/prefect-worker
   REVISION_HINT: Update revision to the next Worker Image Revision, such as r1 or r2.
 
 jobs:
@@ -27,11 +27,48 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Detect release-triggering changes
+        id: release_changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          release_inputs=(
+            version
+            revision
+            images/base/Dockerfile
+            images/process/Dockerfile
+            scripts/resolve-worker-image-tags.sh
+            .github/workflows/release-worker-images.yml
+          )
+
+          if git diff --quiet "${BASE_SHA}...${HEAD_SHA}" -- "${release_inputs[@]}"; then
+            release_changes=false
+          else
+            diff_status=$?
+
+            if [ "${diff_status}" -ne 1 ]; then
+              exit "${diff_status}"
+            fi
+
+            release_changes=true
+          fi
+
+          echo "release_changes=${release_changes}" >> "${GITHUB_OUTPUT}"
+
+      - name: Report no release changes
+        if: steps.release_changes.outputs.release_changes != 'true'
+        run: echo "No release-triggering files changed; skipping duplicate tag checks."
+
       - name: Resolve release tags
+        if: steps.release_changes.outputs.release_changes == 'true'
         id: tags
         run: scripts/resolve-worker-image-tags.sh
 
       - name: Check git tag
+        if: steps.release_changes.outputs.release_changes == 'true'
         env:
           RELEASE_TAG: ${{ steps.tags.outputs.release_tag }}
         run: |
@@ -46,6 +83,7 @@ jobs:
           fi
 
       - name: Check Docker Hub tags
+        if: steps.release_changes.outputs.release_changes == 'true'
         env:
           BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
           PROCESS_IMAGE: ${{ steps.tags.outputs.process_image }}
@@ -55,18 +93,26 @@ jobs:
           duplicate_found=false
 
           for image in "${BASE_IMAGE}" "${PROCESS_IMAGE}"; do
-            inspect_output="$(docker manifest inspect "${image}" 2>&1)" && inspect_status=0 || inspect_status=$?
+            repository_path="${image%:*}"
+            namespace="${repository_path%%/*}"
+            repository="${repository_path#*/}"
+            tag="${image##*:}"
+            tag_url="https://hub.docker.com/v2/namespaces/${namespace}/repositories/${repository}/tags/${tag}"
+            http_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "${tag_url}")"
 
-            if [ "${inspect_status}" -eq 0 ]; then
-              echo "Worker Image Tag already exists on Docker Hub: ${image}" >&2
-              duplicate_found=true
-            elif printf '%s' "${inspect_output}" | grep -Eq 'no such manifest|manifest unknown'; then
-              echo "Worker Image Tag is available on Docker Hub: ${image}"
-            else
-              echo "Could not inspect Docker Hub tag: ${image}" >&2
-              printf '%s\n' "${inspect_output}" >&2
-              exit "${inspect_status}"
-            fi
+            case "${http_status}" in
+              200)
+                echo "Worker Image Tag already exists on Docker Hub: ${image}" >&2
+                duplicate_found=true
+                ;;
+              404)
+                echo "Worker Image Tag is available on Docker Hub: ${image}"
+                ;;
+              *)
+                echo "Could not inspect Docker Hub tag: ${image} (HTTP ${http_status})" >&2
+                exit 1
+                ;;
+            esac
           done
 
           if [ "${duplicate_found}" = "true" ]; then
@@ -75,6 +121,7 @@ jobs:
           fi
 
       - name: Report release tags
+        if: steps.release_changes.outputs.release_changes == 'true'
         env:
           RELEASE_TAG: ${{ steps.tags.outputs.release_tag }}
           BASE_IMAGE: ${{ steps.tags.outputs.base_image }}

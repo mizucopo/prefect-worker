@@ -4,12 +4,14 @@ Prefect の Process Work Pool 向け Worker Image をビルドし、Docker Hub �
 
 ## 管理するもの
 
-このリポジトリは、次の Worker Image を Docker Hub の `mizucopo/prefect-flows` に公開します。
+このリポジトリは、次の Worker Image を Docker Hub の `mizucopo/prefect-worker` に公開します。
 
 - Base Worker Image: Prefect 公式イメージを親にし、`gzip` コマンドと PostgreSQL 16/17/18 のクライアントツールを実行できる共通イメージ
 - Process Worker Image: Base Worker Image に Docker CLI を追加した Process Work Pool 向けイメージ
 
 `latest` タグは公開しません。Worker Image Tag は Upstream Prefect Image Tag、Worker Image の種類、必要に応じて Worker Image Revision から作ります。
+
+Copier の回答値、テンプレートとの差分、安全な更新手順は [Copier運用](docs/copier.md) に記録しています。
 
 ## リリースする
 
@@ -29,6 +31,7 @@ printf "r1\n" > revision
 ```
 
 `main` ブランチで `version`、`revision`、`images/base/Dockerfile`、`images/process/Dockerfile`、`scripts/resolve-worker-image-tags.sh`、または `.github/workflows/release-worker-images.yml` が更新されると、GitHub Actions が Worker Image Release を作成します。
+Pull Requestでは同じファイルが変更された場合だけ、予定するgit tagとDocker Hub tagが未使用かを検査します。リリース対象を変更しない文書や設定だけのPull Requestでもworkflowは成功を報告し、重複タグ検査だけを省略します。
 手動で実行する場合も、GitHub Actions の `Release Worker Images` workflow を `main` ブランチから実行します。
 
 ## リリースで作られるもの
@@ -38,8 +41,8 @@ printf "r1\n" > revision
 | 種類 | 名前 |
 | --- | --- |
 | Worker Image Release Tag | `3.7.4-python3.14` |
-| Base Worker Image | `mizucopo/prefect-flows:3.7.4-python3.14-base` |
-| Process Worker Image | `mizucopo/prefect-flows:3.7.4-python3.14-process` |
+| Base Worker Image | `mizucopo/prefect-worker:3.7.4-python3.14-base` |
+| Process Worker Image | `mizucopo/prefect-worker:3.7.4-python3.14-process` |
 
 `revision` が `r1` の場合は、それぞれの末尾に `-r1` を付けます。
 
@@ -70,7 +73,7 @@ PROCESS_IMAGE_TAG="$(cat version)-process"
 イメージタグ用の変数を設定します。
 
 ```sh
-IMAGE_REPOSITORY="mizucopo/prefect-flows"
+IMAGE_REPOSITORY="mizucopo/prefect-worker"
 PREFECT_IMAGE_TAG="$(cat version)"
 REVISION="$(cat revision)"
 ```
@@ -128,7 +131,7 @@ docker push "${IMAGE_REPOSITORY}:${PROCESS_IMAGE_TAG}"
 
 ```yaml
 prefect-process-worker:
-  image: "mizucopo/prefect-flows:3.7.4-python3.14-process"
+  image: "mizucopo/prefect-worker:3.7.4-python3.14-process"
   restart: unless-stopped
   container_name: prefect-process-worker
   networks:
