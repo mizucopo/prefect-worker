@@ -1,7 +1,7 @@
 _commit: 9f5027b
 _src_path: git@github.com:mizucopo/repo-template.git
 author_name: みず
-docker_image_name: prefect-flows
+docker_image_name: prefect-worker
 docker_registry: mizucopo
 use_aws_ecr: false
 use_chrome_extension: false

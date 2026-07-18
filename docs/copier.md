@@ -32,7 +32,7 @@
 | 項目 | 現在値 | 判定と理由 |
 | --- | --- | --- |
 | `author_name` | `みず` | 正しい。MIT LICENSE の著作者名と一致する |
-| `docker_image_name` | `prefect-flows` | 正しい。実際の Docker Hub repository `mizucopo/prefect-flows` と一致する |
+| `docker_image_name` | `prefect-worker` | 正しい。Worker Imageの公開先として設定した Docker Hub repository `mizucopo/prefect-worker` と一致する |
 | `docker_registry` | `mizucopo` | 正しい。Docker Hub のnamespaceおよびログインユーザーと一致する |
 | `use_aws_ecr` | `false` | 正しい。配布先は AWS ECR ではなく Docker Hub |
 | `use_chrome_extension` | `false` | 正しい。Chrome Extension のsource、package、buildは存在しない |
@@ -57,7 +57,6 @@
 - `AGENTS.md` と `CLAUDE.md` は、最新テンプレートのIssue-first branch workflowと整形を採用する
 - `.gitignore` は、最新テンプレートが追加したRust、Node.js、coverageの共通ignoreを採用する
 - `.copier-answers.yml` は、新しいruntime回答の明示的な `false` と最新 `_commit` を記録する
-- 使われなくなった `docker_image_name: prefect-worker` は、実際のrepository名 `prefect-flows` に直す
 - `.github/dependabot.yml` のDocker監視はbuild `ARG` 経由のimageを更新できず、GitHub Actions監視もテンプレート外の独自差分だったため削除する
 
 ### `repo-template` 側へ汎用化する共通変更

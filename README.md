@@ -4,7 +4,7 @@ Prefect の Process Work Pool 向け Worker Image をビルドし、Docker Hub �
 
 ## 管理するもの
 
-このリポジトリは、次の Worker Image を Docker Hub の `mizucopo/prefect-flows` に公開します。
+このリポジトリは、次の Worker Image を Docker Hub の `mizucopo/prefect-worker` に公開します。
 
 - Base Worker Image: Prefect 公式イメージを親にし、`gzip` コマンドと PostgreSQL 16/17/18 のクライアントツールを実行できる共通イメージ
 - Process Worker Image: Base Worker Image に Docker CLI を追加した Process Work Pool 向けイメージ
@@ -41,8 +41,8 @@ Pull Requestでは同じファイルが変更された場合だけ、予定す�
 | 種類 | 名前 |
 | --- | --- |
 | Worker Image Release Tag | `3.7.4-python3.14` |
-| Base Worker Image | `mizucopo/prefect-flows:3.7.4-python3.14-base` |
-| Process Worker Image | `mizucopo/prefect-flows:3.7.4-python3.14-process` |
+| Base Worker Image | `mizucopo/prefect-worker:3.7.4-python3.14-base` |
+| Process Worker Image | `mizucopo/prefect-worker:3.7.4-python3.14-process` |
 
 `revision` が `r1` の場合は、それぞれの末尾に `-r1` を付けます。
 
@@ -73,7 +73,7 @@ PROCESS_IMAGE_TAG="$(cat version)-process"
 イメージタグ用の変数を設定します。
 
 ```sh
-IMAGE_REPOSITORY="mizucopo/prefect-flows"
+IMAGE_REPOSITORY="mizucopo/prefect-worker"
 PREFECT_IMAGE_TAG="$(cat version)"
 REVISION="$(cat revision)"
 ```
@@ -131,7 +131,7 @@ docker push "${IMAGE_REPOSITORY}:${PROCESS_IMAGE_TAG}"
 
 ```yaml
 prefect-process-worker:
-  image: "mizucopo/prefect-flows:3.7.4-python3.14-process"
+  image: "mizucopo/prefect-worker:3.7.4-python3.14-process"
   restart: unless-stopped
   container_name: prefect-process-worker
   networks:

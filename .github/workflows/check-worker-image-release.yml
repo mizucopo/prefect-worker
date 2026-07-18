@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE_REPOSITORY: mizucopo/prefect-flows
+  IMAGE_REPOSITORY: mizucopo/prefect-worker
   REVISION_HINT: Update revision to the next Worker Image Revision, such as r1 or r2.
 
 jobs:
@@ -93,18 +93,26 @@ jobs:
           duplicate_found=false
 
           for image in "${BASE_IMAGE}" "${PROCESS_IMAGE}"; do
-            inspect_output="$(docker manifest inspect "${image}" 2>&1)" && inspect_status=0 || inspect_status=$?
+            repository_path="${image%:*}"
+            namespace="${repository_path%%/*}"
+            repository="${repository_path#*/}"
+            tag="${image##*:}"
+            tag_url="https://hub.docker.com/v2/namespaces/${namespace}/repositories/${repository}/tags/${tag}"
+            http_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "${tag_url}")"
 
-            if [ "${inspect_status}" -eq 0 ]; then
-              echo "Worker Image Tag already exists on Docker Hub: ${image}" >&2
-              duplicate_found=true
-            elif printf '%s' "${inspect_output}" | grep -Eq 'no such manifest|manifest unknown'; then
-              echo "Worker Image Tag is available on Docker Hub: ${image}"
-            else
-              echo "Could not inspect Docker Hub tag: ${image}" >&2
-              printf '%s\n' "${inspect_output}" >&2
-              exit "${inspect_status}"
-            fi
+            case "${http_status}" in
+              200)
+                echo "Worker Image Tag already exists on Docker Hub: ${image}" >&2
+                duplicate_found=true
+                ;;
+              404)
+                echo "Worker Image Tag is available on Docker Hub: ${image}"
+                ;;
+              *)
+                echo "Could not inspect Docker Hub tag: ${image} (HTTP ${http_status})" >&2
+                exit 1
+                ;;
+            esac
           done
 
           if [ "${duplicate_found}" = "true" ]; then
