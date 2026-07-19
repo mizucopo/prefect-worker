@@ -32,6 +32,7 @@
 | 項目 | 現在値 | 判定と理由 |
 | --- | --- | --- |
 | `author_name` | `みず` | 正しい。MIT LICENSE の著作者名と一致する |
+| `author_email` | `mizu.copo@gmail.com` | 正しい。リポジトリのcommit作者メールと一致する。テンプレート標準のrelease workflowを有効にした場合は、`author_name` とともにannotated tagの作者設定に使われる |
 | `docker_image_name` | `prefect-worker` | 正しい。Worker Imageの公開先として設定した Docker Hub repository `mizucopo/prefect-worker` と一致する |
 | `docker_registry` | `mizucopo` | 正しい。Docker Hub のnamespaceおよびログインユーザーと一致する |
 | `use_aws_ecr` | `false` | 正しい。配布先は AWS ECR ではなく Docker Hub |
@@ -46,7 +47,7 @@
 | `use_rust` | `false` | 正しい。Rust sourceとCargo projectは存在しない |
 | `use_tauri` | `false` | 正しい。Tauri applicationは存在しない |
 
-無効なruntimeや配布機能にだけ表示される条件付き質問は、回答ファイルへ推測で追加しません。現在は `python_version`、`author_email`、`rust_version`、`node_version`、Chrome Extension/Tauriの各設定、AWS account/region、Chrome Extension release設定が対象外です。
+無効なruntimeや配布機能にだけ表示される条件付き質問は、回答ファイルへ推測で追加しません。現在は `python_version`、`rust_version`、`node_version`、Chrome Extension/Tauriの各設定、AWS account/region、Chrome Extension release設定が対象外です。
 
 現在の `copier.yml` には、Shell runtime、テンプレート外のCI、Shell test、ドキュメント、デプロイを個別に表す回答項目はありません。これらは存在しない回答値を追加せず、リポジトリ固有のscript、workflow、README、ADRとして管理します。package managerも利用していないため、Python、Rust、Node.jsのruntime supportを有効化しません。
 
@@ -56,19 +57,19 @@
 
 - `AGENTS.md` と `CLAUDE.md` は、最新テンプレートのIssue-first branch workflowと整形を採用する
 - `.gitignore` は、最新テンプレートが追加したRust、Node.js、coverageの共通ignoreを採用する
-- `.copier-answers.yml` は、新しいruntime回答の明示的な `false` と最新 `_commit` を記録する
+- `.copier-answers.yml` は、現在のtemplate schemaで常時管理する `author_email`、無効なruntime回答の明示的な `false`、最新 `_commit` を記録する
 - `.github/dependabot.yml` のDocker監視はbuild `ARG` 経由のimageを更新できず、GitHub Actions監視もテンプレート外の独自差分だったため削除する
 
 ### `repo-template` 側へ汎用化する共通変更
 
 Docker利用とDocker Dependabot監視を分離する共通変更は、[`repo-template` Issue #31](https://github.com/mizucopo/repo-template/issues/31) と [PR #32](https://github.com/mizucopo/repo-template/pull/32) で解消しました。このリポジトリは `use_docker: true` と `use_dependabot_docker: false` を併用し、Docker関連ファイルを維持したまま動作しない監視を生成しません。
 
-残る共通変更は、次のフォローアップとして `repo-template` 側で扱います。
+残る共通変更は、[`repo-template` Issue #40](https://github.com/mizucopo/repo-template/issues/40) で扱います。
 
 - テンプレート外のGitHub Actions workflowを使うリポジトリでも、GitHub Actions監視を選択できるようにする
-- 独立したGitHub Actions監視optionの有効・無効と、他ecosystemとの併用を `template_tests/test_template.py` で検証する
+- 独立したGitHub Actions監視optionの有効・無効、他ecosystemとの併用、全件非生成を `template_tests/test_template.py` で検証する
 
-テンプレートに未実装の回答値は、このリポジトリの `.copier-answers.yml` へ先行追加しません。
+テンプレートに未実装の回答値は、このリポジトリの `.copier-answers.yml` へ先行追加せず、独自 `.github/dependabot.yml` も作成しません。
 
 ### このリポジトリに残す固有差分
 
