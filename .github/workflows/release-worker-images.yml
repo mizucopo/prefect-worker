@@ -23,7 +23,23 @@ env:
   DOCKERHUB_URL: https://hub.docker.com/r/mizucopo/prefect-worker
 
 jobs:
+  resolve-tags:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.tags.outputs.release_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Resolve release tags
+        id: tags
+        run: scripts/resolve-worker-image-tags.sh
+
   release:
+    needs: resolve-tags
+    concurrency:
+      group: worker-image-release-${{ needs.resolve-tags.outputs.release_tag }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: Require main
