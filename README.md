@@ -30,8 +30,9 @@ printf "3.8.2-python3.14\n" > version
 printf "r1\n" > revision
 ```
 
-`main` ブランチで `version`、`revision`、`images/base/Dockerfile`、`images/process/Dockerfile`、`scripts/resolve-worker-image-tags.sh`、または `.github/workflows/release-worker-images.yml` が更新されると、GitHub Actions が Worker Image Release を作成します。
+`main` ブランチで `version`、`revision`、`images/base/Dockerfile`、`images/process/Dockerfile`、または `scripts/resolve-worker-image-tags.sh` が更新されると、GitHub Actions が Worker Image Release を作成します。
 Pull Requestでは同じファイルが変更された場合だけ、予定するgit tagとDocker Hub tagが未使用かを検査します。リリース対象を変更しない文書や設定だけのPull Requestでもworkflowは成功を報告し、重複タグ検査だけを省略します。
+`.github/workflows/release-worker-images.yml` だけの変更ではreleaseを開始しません。変更後のworkflowは、次に実際のrelease入力が更新されたときに使用します。手動公開が必要な場合は未使用の `version` または `revision` へ更新してから実行します。
 手動で実行する場合も、GitHub Actions の `Release Worker Images` workflow を `main` ブランチから実行します。
 
 ## リリースで作られるもの
