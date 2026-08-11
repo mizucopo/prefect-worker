@@ -27,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_tag: ${{ steps.tags.outputs.release_tag }}
+      concurrency_key: ${{ steps.concurrency-key.outputs.key }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -35,10 +36,18 @@ jobs:
         id: tags
         run: scripts/resolve-worker-image-tags.sh
 
+      - name: Derive concurrency key
+        id: concurrency-key
+        env:
+          RELEASE_TAG: ${{ steps.tags.outputs.release_tag }}
+        run: |
+          key="$(printf '%s' "$RELEASE_TAG" | sha256sum | cut -d ' ' -f 1)"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
   release:
     needs: resolve-tags
     concurrency:
-      group: worker-image-release-${{ needs.resolve-tags.outputs.release_tag }}
+      group: worker-image-release-${{ needs.resolve-tags.outputs.concurrency_key }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
