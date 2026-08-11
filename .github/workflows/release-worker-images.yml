@@ -10,6 +10,8 @@ on:
       - images/base/Dockerfile
       - images/process/Dockerfile
       - scripts/resolve-worker-image-tags.sh
+      - .github/scripts/*.sh
+      - .github/workflows/release-worker-images.yml
   workflow_dispatch:
 
 permissions:
@@ -38,12 +40,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-
-      - name: Acquire release lock
-        id: release-queue
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/acquire-docker-release-lock.sh
 
       - name: Resolve release tags
         id: tags
@@ -261,12 +257,3 @@ jobs:
             --title "Release ${RELEASE_TAG}" \
             --notes-file release-notes.md \
             --latest=false
-
-      - name: Release lock
-        if: always() && steps.release-queue.outputs.lock_commit != ''
-        env:
-          LOCK_COMMIT: ${{ steps.release-queue.outputs.lock_commit }}
-        run: |
-          git push \
-            --force-with-lease="refs/heads/automation/docker-release-lock:$LOCK_COMMIT" \
-            origin ":refs/heads/automation/docker-release-lock"
