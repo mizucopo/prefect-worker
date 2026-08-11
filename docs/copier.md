@@ -40,6 +40,7 @@
 | `use_docker` | `true` | 正しい。このリポジトリの主要成果物は2種類の Docker image |
 | `use_dependabot_docker` | `false` | 正しい。Dockerfileの `FROM` imageをbuild `ARG` で指定しており、Docker Dependabotの更新対象にならない |
 | `use_dependabot_github_actions` | `true` | 正しい。固有workflowを含むGitHub Actionsのpin更新を監視する |
+| `use_gh_actions_docker_quality` | `false` | 正しい。テンプレート標準は単一imageのbuild/smokeを前提とするため、依存順序のあるBase/Process 2 imageを検証する固有workflowを保持する |
 | `use_gh_actions_docker_release` | `false` | 正しい。テンプレート標準は単一imageと `latest` tagを前提とするため、2種類のimmutableなWorker Imageを扱う固有workflowには適用できない |
 | `use_gh_actions_pr_tag_check` | `false` | 正しい。Worker Image Release Tagと2種類のDocker tagを検査する固有workflowを使う |
 | `use_gh_actions_release` | `false` | 正しい。Docker image公開後にGitHub Releaseを作る固有workflowを使う |
@@ -72,5 +73,6 @@ Docker利用とDocker Dependabot監視を分離する共通変更は、[`repo-te
 - `version` はproject SemVerではなくUpstream Prefect Image Tagを保持する。親imageと公開tagを決める業務値であり、汎用テンプレートの `0.1.0` へ戻せない
 - `revision` は同じUpstream Prefect Image Tagを再公開する場合だけ使うWorker Image Revisionを保持する。テンプレート標準releaseに同じ概念はない
 - `.github/workflows/check-worker-image-release.yml` はgit tagと2種類のDocker Hub tagをmerge前に検査する
+- `.github/workflows/docker-quality-checks.yml` はBase Worker Imageを検証・buildした後、そのlocal imageを親にProcess Worker Imageをbuildしてsmoke testするため、単一image向けのテンプレート標準workflowへ置換しない
 - `.github/workflows/release-worker-images.yml` はBase Worker Imageを先に公開し、それを親にProcess Worker Imageを公開してからgit tagとGitHub Releaseを作る
 - `images/`、`scripts/`、`tests/`、`README.md`、`CONTEXT.md`、`docs/adr/` はWorker Imageの機能、用語、検証、設計判断を管理するため、汎用テンプレートへ統合しない

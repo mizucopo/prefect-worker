@@ -6,7 +6,7 @@ script_path="$repo_root/scripts/resolve-worker-image-tags.sh"
 image_repository="mizucopo/prefect-worker"
 version_tag="3.8.1-python3.14"
 tmp_dir="$(mktemp -d)"
-trap 'rm -rf "$tmp_dir"' EXIT
+trap 'rm -rf "$tmp_dir"' 0
 
 run_case() {
   version_value="$1"
