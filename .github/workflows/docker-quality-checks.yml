@@ -38,7 +38,7 @@ jobs:
         env:
           PREFECT_IMAGE_TAG: ${{ steps.version.outputs.version }}
         run: >-
-          docker build
+          docker buildx build --load
           --build-arg "PREFECT_IMAGE_TAG=$PREFECT_IMAGE_TAG"
           --file images/base/Dockerfile
           --tag prefect-worker-base:pr .
@@ -48,7 +48,7 @@ jobs:
 
       - name: Build process image
         run: >-
-          docker build
+          docker buildx build --load
           --build-arg BASE_IMAGE=prefect-worker-base:pr
           --file images/process/Dockerfile
           --tag prefect-worker-process:pr .
