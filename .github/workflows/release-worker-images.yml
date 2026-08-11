@@ -22,8 +22,10 @@ env:
   DOCKERHUB_URL: https://hub.docker.com/r/mizucopo/prefect-worker
 
 jobs:
-  release:
+  release-lock:
     runs-on: ubuntu-latest
+    outputs:
+      lock_commit: ${{ steps.release-queue.outputs.lock_commit }}
 
     steps:
       - name: Require main
@@ -100,6 +102,21 @@ jobs:
           done
 
           echo "lock_commit=$lock_commit" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: release-lock
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Read release lock state
+        id: release-queue
+        env:
+          LOCK_COMMIT: ${{ needs.release-lock.outputs.lock_commit }}
+        run: echo "lock_commit=$LOCK_COMMIT" >> "$GITHUB_OUTPUT"
 
       - name: Resolve release tags
         id: tags
