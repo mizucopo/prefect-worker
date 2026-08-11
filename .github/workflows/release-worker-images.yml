@@ -43,15 +43,20 @@ jobs:
 
           poll_interval=30
           while :; do
-            active_runs_json="$(
-              gh api --paginate \
-                --header "Accept: application/vnd.github+json" \
-                --header "X-GitHub-Api-Version: 2022-11-28" \
-                "/repos/$GITHUB_REPOSITORY/actions/workflows/release-worker-images.yml/runs?branch=main&per_page=100" \
-                | jq -s \
-                  '[.[].workflow_runs[]
-                    | select(.status != "completed")]'
-            )"
+            active_runs_json='[]'
+            for status in queued in_progress waiting pending requested; do
+              status_runs_json="$(
+                gh api --paginate \
+                  --header "Accept: application/vnd.github+json" \
+                  --header "X-GitHub-Api-Version: 2022-11-28" \
+                  "/repos/$GITHUB_REPOSITORY/actions/workflows/release-worker-images.yml/runs?branch=main&status=$status&per_page=100" \
+                  | jq -s '[.[].workflow_runs[]]'
+              )"
+              active_runs_json="$(
+                jq -c --argjson runs "$status_runs_json" '. + $runs' \
+                  <<< "$active_runs_json"
+              )"
+            done
             active_earlier_runs="$(
               jq --argjson current "$GITHUB_RUN_NUMBER" \
                 '[.[] | select(.run_number < $current)] | length' \
