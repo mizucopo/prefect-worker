@@ -18,7 +18,7 @@ Copier の回答値、テンプレートとの差分、安全な更新手順は 
 通常の Worker Image Release では、`version` に Upstream Prefect Image Tag を書き、`revision` は空にします。
 
 ```sh
-printf "3.8.1-python3.14\n" > version
+printf "3.8.2-python3.14\n" > version
 : > revision
 ```
 
@@ -36,13 +36,13 @@ Pull Requestでは同じファイルが変更された場合だけ、予定す�
 
 ## リリースで作られるもの
 
-`version` が `3.8.1-python3.14`、`revision` が空の場合、workflow は次の名前を使います。
+`version` が `3.8.2-python3.14`、`revision` が空の場合、workflow は次の名前を使います。
 
 | 種類 | 名前 |
 | --- | --- |
-| Worker Image Release Tag | `3.8.1-python3.14` |
-| Base Worker Image | `mizucopo/prefect-worker:3.8.1-python3.14-base` |
-| Process Worker Image | `mizucopo/prefect-worker:3.8.1-python3.14-process` |
+| Worker Image Release Tag | `3.8.2-python3.14` |
+| Base Worker Image | `mizucopo/prefect-worker:3.8.2-python3.14-base` |
+| Process Worker Image | `mizucopo/prefect-worker:3.8.2-python3.14-process` |
 
 `revision` が `r1` の場合は、それぞれの末尾に `-r1` を付けます。
 
@@ -131,7 +131,7 @@ docker push "${IMAGE_REPOSITORY}:${PROCESS_IMAGE_TAG}"
 
 ```yaml
 prefect-process-worker:
-  image: "mizucopo/prefect-worker:3.8.1-python3.14-process"
+  image: "mizucopo/prefect-worker:3.8.2-python3.14-process"
   restart: unless-stopped
   container_name: prefect-process-worker
   networks:
