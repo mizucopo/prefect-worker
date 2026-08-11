@@ -43,12 +43,12 @@ jobs:
 
           while :; do
             active_earlier_runs="$(
-              gh api \
+              gh api --paginate \
                 --header "Accept: application/vnd.github+json" \
                 --header "X-GitHub-Api-Version: 2022-11-28" \
                 "/repos/$GITHUB_REPOSITORY/actions/workflows/release-worker-images.yml/runs?branch=main&per_page=100" \
-                | jq --argjson current "$GITHUB_RUN_NUMBER" \
-                  '[.workflow_runs[]
+                | jq -s --argjson current "$GITHUB_RUN_NUMBER" \
+                  '[.[].workflow_runs[]
                     | select(.run_number < $current and .status != "completed")]
                    | length'
             )"
