@@ -41,6 +41,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          poll_interval=30
           while :; do
             active_runs_json="$(
               gh api --paginate \
@@ -73,7 +74,11 @@ jobs:
             fi
 
             echo "Waiting for $active_earlier_runs earlier release run(s)."
-            sleep 15
+            sleep "$poll_interval"
+            poll_interval=$((poll_interval * 2))
+            if [ "$poll_interval" -gt 300 ]; then
+              poll_interval=300
+            fi
           done
 
       - name: Checkout
