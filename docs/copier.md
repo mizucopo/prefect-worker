@@ -39,6 +39,7 @@
 | `use_chrome_extension` | `false` | 正しい。Chrome Extension のsource、package、buildは存在しない |
 | `use_docker` | `true` | 正しい。このリポジトリの主要成果物は2種類の Docker image |
 | `use_dependabot_docker` | `false` | 正しい。Dockerfileの `FROM` imageをbuild `ARG` で指定しており、Docker Dependabotの更新対象にならない |
+| `use_dependabot_github_actions` | `true` | 正しい。固有workflowを含むGitHub Actionsのpin更新を監視する |
 | `use_gh_actions_docker_release` | `false` | 正しい。テンプレート標準は単一imageと `latest` tagを前提とするため、2種類のimmutableなWorker Imageを扱う固有workflowには適用できない |
 | `use_gh_actions_pr_tag_check` | `false` | 正しい。Worker Image Release Tagと2種類のDocker tagを検査する固有workflowを使う |
 | `use_gh_actions_release` | `false` | 正しい。Docker image公開後にGitHub Releaseを作る固有workflowを使う |
@@ -58,18 +59,13 @@
 - `AGENTS.md` と `CLAUDE.md` は、最新テンプレートのIssue-first branch workflowと整形を採用する
 - `.gitignore` は、最新テンプレートが追加したRust、Node.js、coverageの共通ignoreを採用する
 - `.copier-answers.yml` は、現在のtemplate schemaで常時管理する `author_email`、無効なruntime回答の明示的な `false`、最新 `_commit` を記録する
-- `.github/dependabot.yml` のDocker監視はbuild `ARG` 経由のimageを更新できず、GitHub Actions監視もテンプレート外の独自差分だったため削除する
+- `.github/dependabot.yml` のDocker監視はbuild `ARG` 経由のimageを更新できないため削除し、独立したGitHub Actions監視だけをテンプレートから生成する
 
 ### `repo-template` 側へ汎用化する共通変更
 
 Docker利用とDocker Dependabot監視を分離する共通変更は、[`repo-template` Issue #31](https://github.com/mizucopo/repo-template/issues/31) と [PR #32](https://github.com/mizucopo/repo-template/pull/32) で解消しました。このリポジトリは `use_docker: true` と `use_dependabot_docker: false` を併用し、Docker関連ファイルを維持したまま動作しない監視を生成しません。
 
-残る共通変更は、[`repo-template` Issue #40](https://github.com/mizucopo/repo-template/issues/40) で扱います。
-
-- テンプレート外のGitHub Actions workflowを使うリポジトリでも、GitHub Actions監視を選択できるようにする
-- 独立したGitHub Actions監視optionの有効・無効、他ecosystemとの併用、全件非生成を `template_tests/test_template.py` で検証する
-
-テンプレートに未実装の回答値は、このリポジトリの `.copier-answers.yml` へ先行追加せず、独自 `.github/dependabot.yml` も作成しません。
+独立したGitHub Actions監視は、[`repo-template` Issue #40](https://github.com/mizucopo/repo-template/issues/40) とPR #61で共通化されました。このリポジトリは `use_dependabot_github_actions: true` を記録し、固有release workflowを通常のrelease入力に含めずにaction pinだけを更新できます。
 
 ### このリポジトリに残す固有差分
 

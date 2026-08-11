@@ -10,14 +10,13 @@ on:
       - images/base/Dockerfile
       - images/process/Dockerfile
       - scripts/resolve-worker-image-tags.sh
-      - .github/workflows/release-worker-images.yml
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-worker-images-main
+  group: ${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: false
 
 env:

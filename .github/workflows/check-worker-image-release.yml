@@ -41,7 +41,6 @@ jobs:
             images/base/Dockerfile
             images/process/Dockerfile
             scripts/resolve-worker-image-tags.sh
-            .github/workflows/release-worker-images.yml
           )
 
           if git diff --quiet "${BASE_SHA}...${HEAD_SHA}" -- "${release_inputs[@]}"; then
