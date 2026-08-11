@@ -24,9 +24,6 @@ env:
 jobs:
   release-lock:
     runs-on: ubuntu-latest
-    outputs:
-      lock_commit: ${{ steps.release-queue.outputs.lock_commit }}
-
     steps:
       - name: Require main
         run: |
@@ -43,128 +40,9 @@ jobs:
           fetch-depth: 0
 
       - name: Acquire release lock
-        id: release-queue
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          lock_ref="refs/heads/automation/docker-release-lock"
-          lock_tracking_ref="refs/remotes/origin/automation/docker-release-lock"
-          lock_commit="$(
-            printf 'Docker release lock\n\nrun-id: %s\n' "$GITHUB_RUN_ID" \
-              | git -c user.name=github-actions -c user.email=github-actions@github.com \
-                commit-tree "$(git rev-parse 'HEAD^{tree}')" -p "$GITHUB_SHA"
-          )"
-          poll_interval=30
-          wait_before_retry() {
-            sleep "$poll_interval"
-            poll_interval=$((poll_interval * 2))
-            if [ "$poll_interval" -gt 300 ]; then
-              poll_interval=300
-            fi
-          }
-          missing_ref_retry=false
-          holder_response="$(mktemp)"
-          trap 'rm -f "$holder_response"' EXIT
-          while :; do
-            set +e
-            push_output="$(
-              git push \
-                --force-with-lease="$lock_ref:" \
-                origin "${lock_commit}:$lock_ref" 2>&1
-            )"
-            push_status=$?
-            set -e
-            if [ "$push_status" -eq 0 ]; then
-              break
-            fi
-
-            set +e
-            git ls-remote --exit-code --refs origin "$lock_ref" >/dev/null
-            lock_lookup_status=$?
-            set -e
-            case "$lock_lookup_status" in
-              0)
-                missing_ref_retry=false
-                ;;
-              2)
-                if [ "$missing_ref_retry" = "false" ]; then
-                  missing_ref_retry=true
-                  continue
-                fi
-                printf '%s\n' "$push_output" >&2
-                echo "The release lock ref is absent, but creating it was rejected." >&2
-                exit "$push_status"
-                ;;
-              *)
-                printf '%s\n' "$push_output" >&2
-                echo "Could not inspect the release lock after a failed push." >&2
-                exit "$lock_lookup_status"
-                ;;
-            esac
-
-            if ! git fetch --force origin "$lock_ref:$lock_tracking_ref"; then
-              wait_before_retry
-              continue
-            fi
-            current_lock_commit="$(git rev-parse "$lock_tracking_ref")"
-            holder_run_id="$(
-              git show -s --format=%B "$current_lock_commit" \
-                | sed -n 's/^run-id: //p'
-            )"
-            if [[ ! "$holder_run_id" =~ ^[0-9]+$ ]]; then
-              echo "The release lock has no valid run id; refusing to replace it." >&2
-              exit 1
-            fi
-
-            if [ "$holder_run_id" = "$GITHUB_RUN_ID" ]; then
-              lock_commit="$current_lock_commit"
-              break
-            fi
-
-            set +e
-            holder_http_status="$(
-              curl --silent --show-error --location \
-                --output "$holder_response" \
-                --write-out '%{http_code}' \
-                --header "Accept: application/vnd.github+json" \
-                --header "Authorization: Bearer $GH_TOKEN" \
-                --header "X-GitHub-Api-Version: 2022-11-28" \
-                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$holder_run_id"
-            )"
-            curl_status=$?
-            set -e
-            if [ "$curl_status" -ne 0 ]; then
-              echo "Could not inspect release-lock holder run $holder_run_id." >&2
-              exit "$curl_status"
-            fi
-
-            case "$holder_http_status" in
-              200)
-                holder_status="$(jq -er '.status' "$holder_response")"
-                ;;
-              404)
-                holder_status=completed
-                ;;
-              *)
-                echo "Could not inspect release-lock holder run $holder_run_id: HTTP $holder_http_status." >&2
-                exit 1
-                ;;
-            esac
-            if [ "$holder_status" = "completed" ]; then
-              if git push \
-                --force-with-lease="$lock_ref:$current_lock_commit" \
-                origin "${lock_commit}:$lock_ref"; then
-                break
-              fi
-            fi
-
-            echo "Waiting for release lock held by run $holder_run_id."
-            wait_before_retry
-          done
-
-          echo "lock_commit=$lock_commit" >> "$GITHUB_OUTPUT"
+        run: bash .github/scripts/acquire-docker-release-lock.sh
 
   release:
     needs: release-lock
@@ -175,11 +53,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read release lock state
+      - name: Acquire or reuse release lock
         id: release-queue
         env:
-          LOCK_COMMIT: ${{ needs.release-lock.outputs.lock_commit }}
-        run: echo "lock_commit=$LOCK_COMMIT" >> "$GITHUB_OUTPUT"
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/acquire-docker-release-lock.sh
 
       - name: Resolve release tags
         id: tags
@@ -274,36 +152,50 @@ jobs:
             --latest=false
 
       - name: Check Docker Hub tags
+        id: image-state
         if: steps.existing.outputs.tag_exists != 'true'
         env:
           BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
+          BASE_TAG: ${{ steps.tags.outputs.base_image_tag }}
           PROCESS_IMAGE: ${{ steps.tags.outputs.process_image }}
+          PROCESS_TAG: ${{ steps.tags.outputs.process_image_tag }}
         run: |
           set -euo pipefail
 
-          duplicate_found=false
-
-          for image in "${BASE_IMAGE}" "${PROCESS_IMAGE}"; do
+          check_image() {
+            local image="$1"
+            local tag="$2"
+            local output_name="$3"
+            local inspect_output
+            local inspect_status
+            local image_exists
             inspect_output="$(docker manifest inspect "${image}" 2>&1)" && inspect_status=0 || inspect_status=$?
 
             if [ "${inspect_status}" -eq 0 ]; then
-              echo "Docker image tag already exists: ${image}" >&2
-              duplicate_found=true
+              bash .github/scripts/manage-docker-image-owner.sh verify "$tag"
+              image_exists=true
             elif printf '%s' "${inspect_output}" | grep -Eq 'no such manifest|manifest unknown'; then
               echo "Docker image tag is available: ${image}"
+              image_exists=false
             else
               echo "Could not inspect Docker Hub tag: ${image}" >&2
               printf '%s\n' "${inspect_output}" >&2
               exit "${inspect_status}"
             fi
-          done
+            echo "$output_name=$image_exists" >> "$GITHUB_OUTPUT"
+          }
 
-          if [ "${duplicate_found}" = "true" ]; then
-            exit 1
-          fi
+          check_image "$BASE_IMAGE" "$BASE_TAG" base_exists
+          check_image "$PROCESS_IMAGE" "$PROCESS_TAG" process_exists
+
+      - name: Record Base Worker Image ownership
+        if: steps.existing.outputs.tag_exists != 'true' && steps.image-state.outputs.base_exists != 'true'
+        env:
+          TAG: ${{ steps.tags.outputs.base_image_tag }}
+        run: bash .github/scripts/manage-docker-image-owner.sh record "$TAG"
 
       - name: Build and push Base Worker Image
-        if: steps.existing.outputs.tag_exists != 'true'
+        if: steps.existing.outputs.tag_exists != 'true' && steps.image-state.outputs.base_exists != 'true'
         env:
           BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
           PREFECT_IMAGE_TAG: ${{ steps.tags.outputs.prefect_image_tag }}
@@ -317,8 +209,14 @@ jobs:
 
           docker push "${BASE_IMAGE}"
 
+      - name: Record Process Worker Image ownership
+        if: steps.existing.outputs.tag_exists != 'true' && steps.image-state.outputs.process_exists != 'true'
+        env:
+          TAG: ${{ steps.tags.outputs.process_image_tag }}
+        run: bash .github/scripts/manage-docker-image-owner.sh record "$TAG"
+
       - name: Build and push Process Worker Image
-        if: steps.existing.outputs.tag_exists != 'true'
+        if: steps.existing.outputs.tag_exists != 'true' && steps.image-state.outputs.process_exists != 'true'
         env:
           BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
           PROCESS_IMAGE: ${{ steps.tags.outputs.process_image }}
@@ -343,6 +241,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "${RELEASE_TAG}" -m "Worker Image Release ${RELEASE_TAG}" "${GITHUB_SHA}"
           git push origin "refs/tags/${RELEASE_TAG}"
+
+      - name: Release Worker Image ownership
+        env:
+          BASE_TAG: ${{ steps.tags.outputs.base_image_tag }}
+          PROCESS_TAG: ${{ steps.tags.outputs.process_image_tag }}
+        run: |
+          bash .github/scripts/manage-docker-image-owner.sh release "$BASE_TAG"
+          bash .github/scripts/manage-docker-image-owner.sh release "$PROCESS_TAG"
 
       - name: Create GitHub Release
         if: steps.existing.outputs.tag_exists != 'true'
