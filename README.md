@@ -18,7 +18,7 @@ Copier の回答値、テンプレートとの差分、安全な更新手順は 
 通常の Worker Image Release では、`version` に Upstream Prefect Image Tag を書き、`revision` は空にします。
 
 ```sh
-printf "3.8.1-python3.14\n" > version
+printf "3.8.2-python3.14\n" > version
 : > revision
 ```
 
@@ -30,19 +30,20 @@ printf "3.8.1-python3.14\n" > version
 printf "r1\n" > revision
 ```
 
-`main` ブランチで `version`、`revision`、`images/base/Dockerfile`、`images/process/Dockerfile`、`scripts/resolve-worker-image-tags.sh`、または `.github/workflows/release-worker-images.yml` が更新されると、GitHub Actions が Worker Image Release を作成します。
+`main` ブランチで `version`、`revision`、`images/base/Dockerfile`、`images/process/Dockerfile`、`scripts/resolve-worker-image-tags.sh`、または `.github/scripts/*.sh` が更新されると、GitHub Actions が Worker Image Release を作成します。
 Pull Requestでは同じファイルが変更された場合だけ、予定するgit tagとDocker Hub tagが未使用かを検査します。リリース対象を変更しない文書や設定だけのPull Requestでもworkflowは成功を報告し、重複タグ検査だけを省略します。
+`.github/workflows/release-worker-images.yml` だけの変更ではreleaseを開始しません。変更後のworkflowは、次に実際のrelease入力が更新されたときに使用します。手動公開が必要な場合は未使用の `version` または `revision` へ更新してから実行します。
 手動で実行する場合も、GitHub Actions の `Release Worker Images` workflow を `main` ブランチから実行します。
 
 ## リリースで作られるもの
 
-`version` が `3.8.1-python3.14`、`revision` が空の場合、workflow は次の名前を使います。
+`version` が `3.8.2-python3.14`、`revision` が空の場合、workflow は次の名前を使います。
 
 | 種類 | 名前 |
 | --- | --- |
-| Worker Image Release Tag | `3.8.1-python3.14` |
-| Base Worker Image | `mizucopo/prefect-worker:3.8.1-python3.14-base` |
-| Process Worker Image | `mizucopo/prefect-worker:3.8.1-python3.14-process` |
+| Worker Image Release Tag | `3.8.2-python3.14` |
+| Base Worker Image | `mizucopo/prefect-worker:3.8.2-python3.14-base` |
+| Process Worker Image | `mizucopo/prefect-worker:3.8.2-python3.14-process` |
 
 `revision` が `r1` の場合は、それぞれの末尾に `-r1` を付けます。
 
@@ -131,7 +132,7 @@ docker push "${IMAGE_REPOSITORY}:${PROCESS_IMAGE_TAG}"
 
 ```yaml
 prefect-process-worker:
-  image: "mizucopo/prefect-worker:3.8.1-python3.14-process"
+  image: "mizucopo/prefect-worker:3.8.2-python3.14-process"
   restart: unless-stopped
   container_name: prefect-process-worker
   networks:

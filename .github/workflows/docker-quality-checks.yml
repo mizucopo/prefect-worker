@@ -1,0 +1,57 @@
+name: Docker Quality Checks
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  docker-quality-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run ShellCheck
+        run: shellcheck scripts/*.sh tests/*.sh .github/scripts/*.sh
+
+      - name: Test worker image tag resolver
+        run: bash tests/resolve-worker-image-tags.sh
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Read Prefect image tag
+        id: version
+        run: echo "version=$(cat version)" >> "$GITHUB_OUTPUT"
+
+      - name: Run base image build checks
+        env:
+          PREFECT_IMAGE_TAG: ${{ steps.version.outputs.version }}
+        run: >-
+          docker buildx build --check
+          --build-arg "PREFECT_IMAGE_TAG=$PREFECT_IMAGE_TAG"
+          --file images/base/Dockerfile .
+
+      - name: Build base image
+        env:
+          PREFECT_IMAGE_TAG: ${{ steps.version.outputs.version }}
+        run: >-
+          docker buildx build --builder default --load
+          --build-arg "PREFECT_IMAGE_TAG=$PREFECT_IMAGE_TAG"
+          --file images/base/Dockerfile
+          --tag prefect-worker-base:pr .
+
+      - name: Test base image tools
+        run: bash tests/base-worker-image-postgresql-clients.sh
+
+      - name: Build process image
+        run: >-
+          docker buildx build --builder default --load
+          --build-arg BASE_IMAGE=prefect-worker-base:pr
+          --file images/process/Dockerfile
+          --tag prefect-worker-process:pr .
+
+      - name: Run process image smoke test
+        run: docker run --rm --entrypoint docker prefect-worker-process:pr --version

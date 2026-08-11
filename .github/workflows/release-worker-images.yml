@@ -10,15 +10,12 @@ on:
       - images/base/Dockerfile
       - images/process/Dockerfile
       - scripts/resolve-worker-image-tags.sh
-      - .github/workflows/release-worker-images.yml
+      - .github/scripts/*.sh
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: write
-
-concurrency:
-  group: release-worker-images-main
-  cancel-in-progress: false
 
 env:
   IMAGE_REPOSITORY: mizucopo/prefect-worker
@@ -26,9 +23,33 @@ env:
   DOCKERHUB_URL: https://hub.docker.com/r/mizucopo/prefect-worker
 
 jobs:
-  release:
+  resolve-tags:
     runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.tags.outputs.release_tag }}
+      concurrency_key: ${{ steps.concurrency-key.outputs.key }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Resolve release tags
+        id: tags
+        run: scripts/resolve-worker-image-tags.sh
+
+      - name: Derive concurrency key
+        id: concurrency-key
+        env:
+          RELEASE_TAG: ${{ steps.tags.outputs.release_tag }}
+        run: |
+          key="$(printf '%s' "$RELEASE_TAG" | sha256sum | cut -d ' ' -f 1)"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: resolve-tags
+    concurrency:
+      group: worker-image-release-${{ needs.resolve-tags.outputs.concurrency_key }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
     steps:
       - name: Require main
         run: |
@@ -40,7 +61,7 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -137,36 +158,50 @@ jobs:
             --latest=false
 
       - name: Check Docker Hub tags
+        id: image-state
         if: steps.existing.outputs.tag_exists != 'true'
         env:
           BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
+          BASE_TAG: ${{ steps.tags.outputs.base_image_tag }}
           PROCESS_IMAGE: ${{ steps.tags.outputs.process_image }}
+          PROCESS_TAG: ${{ steps.tags.outputs.process_image_tag }}
         run: |
           set -euo pipefail
 
-          duplicate_found=false
-
-          for image in "${BASE_IMAGE}" "${PROCESS_IMAGE}"; do
+          check_image() {
+            local image="$1"
+            local tag="$2"
+            local output_name="$3"
+            local inspect_output
+            local inspect_status
+            local image_exists
             inspect_output="$(docker manifest inspect "${image}" 2>&1)" && inspect_status=0 || inspect_status=$?
 
             if [ "${inspect_status}" -eq 0 ]; then
-              echo "Docker image tag already exists: ${image}" >&2
-              duplicate_found=true
+              bash .github/scripts/manage-docker-image-owner.sh verify "$tag"
+              image_exists=true
             elif printf '%s' "${inspect_output}" | grep -Eq 'no such manifest|manifest unknown'; then
               echo "Docker image tag is available: ${image}"
+              image_exists=false
             else
               echo "Could not inspect Docker Hub tag: ${image}" >&2
               printf '%s\n' "${inspect_output}" >&2
               exit "${inspect_status}"
             fi
-          done
+            echo "$output_name=$image_exists" >> "$GITHUB_OUTPUT"
+          }
 
-          if [ "${duplicate_found}" = "true" ]; then
-            exit 1
-          fi
+          check_image "$BASE_IMAGE" "$BASE_TAG" base_exists
+          check_image "$PROCESS_IMAGE" "$PROCESS_TAG" process_exists
+
+      - name: Record Base Worker Image ownership
+        if: steps.existing.outputs.tag_exists != 'true' && steps.image-state.outputs.base_exists != 'true'
+        env:
+          TAG: ${{ steps.tags.outputs.base_image_tag }}
+        run: bash .github/scripts/manage-docker-image-owner.sh record "$TAG"
 
       - name: Build and push Base Worker Image
-        if: steps.existing.outputs.tag_exists != 'true'
+        if: steps.existing.outputs.tag_exists != 'true' && steps.image-state.outputs.base_exists != 'true'
         env:
           BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
           PREFECT_IMAGE_TAG: ${{ steps.tags.outputs.prefect_image_tag }}
@@ -180,8 +215,14 @@ jobs:
 
           docker push "${BASE_IMAGE}"
 
+      - name: Record Process Worker Image ownership
+        if: steps.existing.outputs.tag_exists != 'true' && steps.image-state.outputs.process_exists != 'true'
+        env:
+          TAG: ${{ steps.tags.outputs.process_image_tag }}
+        run: bash .github/scripts/manage-docker-image-owner.sh record "$TAG"
+
       - name: Build and push Process Worker Image
-        if: steps.existing.outputs.tag_exists != 'true'
+        if: steps.existing.outputs.tag_exists != 'true' && steps.image-state.outputs.process_exists != 'true'
         env:
           BASE_IMAGE: ${{ steps.tags.outputs.base_image }}
           PROCESS_IMAGE: ${{ steps.tags.outputs.process_image }}
@@ -206,6 +247,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "${RELEASE_TAG}" -m "Worker Image Release ${RELEASE_TAG}" "${GITHUB_SHA}"
           git push origin "refs/tags/${RELEASE_TAG}"
+
+      - name: Release Worker Image ownership
+        env:
+          BASE_TAG: ${{ steps.tags.outputs.base_image_tag }}
+          PROCESS_TAG: ${{ steps.tags.outputs.process_image_tag }}
+        run: |
+          bash .github/scripts/manage-docker-image-owner.sh release "$BASE_TAG"
+          bash .github/scripts/manage-docker-image-owner.sh release "$PROCESS_TAG"
 
       - name: Create GitHub Release
         if: steps.existing.outputs.tag_exists != 'true'
