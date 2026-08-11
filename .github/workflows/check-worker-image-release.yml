@@ -41,7 +41,7 @@ jobs:
             images/base/Dockerfile
             images/process/Dockerfile
             scripts/resolve-worker-image-tags.sh
-            .github/scripts/*.sh
+            '.github/scripts/*.sh'
             .github/workflows/release-worker-images.yml
           )
 
