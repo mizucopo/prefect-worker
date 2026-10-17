@@ -58,7 +58,7 @@
 
 `repo_template_tauri_branding_assets_created: false` はCopierが管理する生成状態で、Tauriを使わないため既定値のまま保持します。廃止された `use_gh_actions_pr_tag_check` と旧runtime starter管理項目は、現行テンプレートの回答ファイルから削除されます。独自のtag検査workflowとWorker Imageの実装は削除しません。既存の有効な回答値に変更はなく、既定値以外の回答追加・変更はありません。
 
-現在の `copier.yml` には、Shell runtime、テンプレート外のCI、Shell test、ドキュメント、デプロイを個別に表す回答項目はありません。これらは存在しない回答値を追加せず、リポジトリ固有のscript、workflow、README、ADRとして管理します。package managerも利用していないため、Python、Rust、Node.jsのruntime supportを有効化しません。
+現在の `copier.yml` には、Shell runtime、テンプレート外のCI、Shell test、ドキュメント、デプロイを個別に表す回答項目はありません。これらは存在しない回答値を追加せず、リポジトリ固有のscript、workflow、READMEとして管理します。package managerも利用していないため、Python、Rust、Node.jsのruntime supportを有効化しません。
 
 ## テンプレート差分
 
@@ -83,4 +83,4 @@ Docker利用とDocker Dependabot監視を分離する共通変更は、[`repo-te
 - `.github/workflows/check-worker-image-release.yml` はgit tagと2種類のDocker Hub tagをmerge前に検査する
 - `.github/workflows/docker-quality-checks.yml` はBase Worker Imageを検証・buildした後、そのlocal imageを親にProcess Worker Imageをbuildしてsmoke testするため、単一image向けのテンプレート標準workflowへ置換しない
 - `.github/workflows/release-worker-images.yml` はBase Worker Imageを先に公開し、それを親にProcess Worker Imageを公開してからgit tagとGitHub Releaseを作る
-- `images/`、`scripts/`、`tests/`、`.github/scripts/`、`README.md`、`CONTEXT.md`、`docs/adr/`、本書はWorker Imageの機能、用語、検証、設計判断を管理するため、汎用テンプレートへ統合しない
+- `images/`、`scripts/`、`tests/`、`.github/scripts/`、`README.md`、`CONTEXT.md`、本書はWorker Imageの機能、用語、検証、現行仕様を管理するため、汎用テンプレートへ統合しない
