@@ -9,7 +9,7 @@ Prefect の Process Work Pool 向け Worker Image をビルドし、Docker Hub �
 - Base Worker Image: Prefect 公式イメージを親にし、`gzip` コマンドと PostgreSQL 16/17/18 のクライアントツールを実行できる共通イメージ
 - Process Worker Image: Base Worker Image に Docker CLI を追加した Process Work Pool 向けイメージ
 
-`latest` タグは公開しません。Worker Image Tag は Upstream Prefect Image Tag、Worker Image の種類、必要に応じて Worker Image Revision から作ります。
+Worker Image Tag は Upstream Prefect Image Tag、Worker Image の種類、必要に応じて Worker Image Revision から作ります。利用する親イメージと種類を明示し、修正版への切り替えを選べるよう、`latest` タグは公開しません。
 
 Copier の回答値、テンプレートとの差分、安全な更新手順は [Copier運用](docs/copier.md) に記録しています。
 
@@ -33,7 +33,7 @@ printf "r1\n" > revision
 ```
 
 `main` ブランチで `version`、`revision`、`images/base/Dockerfile`、`images/process/Dockerfile`、`scripts/resolve-worker-image-tags.sh`、または `.github/scripts/*.sh` が更新されると、GitHub Actions が Worker Image Release を作成します。
-Pull Requestでは同じファイルが変更された場合だけ、予定するgit tagとDocker Hub tagが未使用かを検査します。リリース対象を変更しない文書や設定だけのPull Requestでもworkflowは成功を報告し、重複タグ検査だけを省略します。
+`main` 向けのPull Requestでは、merge baseからの差分で同じファイルが変更された場合だけ、予定するgit tagとDocker Hub tagが未使用かを検査します。リリース対象を変更しない文書や設定だけのPull Requestでも、必須ステータスチェックを満たすためにworkflowは成功を報告し、重複タグ検査だけを省略します。
 `.github/workflows/release-worker-images.yml` だけの変更ではreleaseを開始しません。変更後のworkflowは、次に実際のrelease入力が更新されたときに使用します。手動公開が必要な場合は未使用の `version` または `revision` へ更新してから実行します。
 手動で実行する場合も、GitHub Actions の `Release Worker Images` workflow を `main` ブランチから実行します。
 
@@ -150,8 +150,3 @@ prefect-process-worker:
   working_dir: /app/flows
   command: sh -c "uv sync --frozen --no-dev && . .venv/bin/activate && prefect worker start --pool process-pool --type process"
 ```
-
-## アーキテクチャ決定
-
-- [Worker Image のタグ](docs/adr/0001-worker-image-tags.md)
-- [Worker Image release automation](docs/adr/0002-worker-image-release-automation.md)

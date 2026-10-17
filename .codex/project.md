@@ -1,6 +1,6 @@
 # Prefect Worker Image 固有の指示
 
-用語は `CONTEXT.md`、Worker Image Tagとreleaseの設計は `docs/adr/`、Copier回答と固有差分は `docs/copier.md` を参照します。既存の設計判断と変更が衝突する場合は明示してください。
+用語は `CONTEXT.md`、Worker Image Tagとreleaseの現行仕様は `README.md`、Copier回答と固有差分は `docs/copier.md` を参照します。
 
 ## 検証
 
