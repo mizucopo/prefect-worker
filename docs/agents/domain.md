@@ -1,24 +1,8 @@
-# Domain docs
+# ドメイン文書
 
-This repository uses a single-context domain documentation layout.
+用語と設計の前提は、ルートの `CONTEXT.md` を参照します。
 
-## Before exploring
+- 用語や設計を変える前に、関係する文書を読む。存在しない文書は飛ばす。
+- Issue、計画、テストでも `CONTEXT.md` の用語を使う。
 
-Read the following sources when they exist and are relevant to the work:
-
-- `CONTEXT.md` at the repository root
-- ADRs under `docs/adr/`
-
-Proceed silently when either source does not exist. Domain-modeling workflows
-create them lazily when terminology or architectural decisions need to be
-recorded.
-
-## Vocabulary and decisions
-
-- Use terminology defined in `CONTEXT.md` in issue titles, implementation plans,
-  test names, and other engineering output.
-- Surface any conflict with an existing ADR explicitly instead of silently
-  overriding the decision.
-
-Repositories with multiple bounded contexts should replace this document with
-their context map and context-specific documentation paths.
+複数のドメインを扱うようになったら、各ドメインの文書への案内に書き換えます。
