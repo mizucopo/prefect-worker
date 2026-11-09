@@ -19,6 +19,8 @@ env:
 
 jobs:
   check:
+    # PR edits can arrive after merge and deletion of the head branch.
+    if: github.event.pull_request.state == 'open'
     runs-on: ubuntu-latest
 
     steps:
