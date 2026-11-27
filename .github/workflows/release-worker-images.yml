@@ -141,16 +141,7 @@ jobs:
           docker manifest inspect "${BASE_IMAGE}" >/dev/null
           docker manifest inspect "${PROCESS_IMAGE}" >/dev/null
 
-          {
-            echo "## Worker Images"
-            echo
-            echo "この GitHub Release に対応する Worker Image です。"
-            echo
-            echo "- Base Worker Image: \`${BASE_IMAGE}\`"
-            echo "- Process Worker Image: \`${PROCESS_IMAGE}\`"
-            echo
-            echo "Docker Hub: ${DOCKERHUB_URL}"
-          } > release-notes.md
+          bash scripts/render-worker-image-release-notes.sh > release-notes.md
 
           gh release create "${RELEASE_TAG}" \
             --title "Release ${RELEASE_TAG}" \
@@ -266,16 +257,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          {
-            echo "## Worker Images"
-            echo
-            echo "この GitHub Release に対応する Worker Image です。"
-            echo
-            echo "- Base Worker Image: \`${BASE_IMAGE}\`"
-            echo "- Process Worker Image: \`${PROCESS_IMAGE}\`"
-            echo
-            echo "Docker Hub: ${DOCKERHUB_URL}"
-          } > release-notes.md
+          bash scripts/render-worker-image-release-notes.sh > release-notes.md
 
           gh release create "${RELEASE_TAG}" \
             --title "Release ${RELEASE_TAG}" \
