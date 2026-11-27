@@ -34,6 +34,23 @@ assert_output_contains() {
   fi
 }
 
+assert_case_fails() {
+  : > "$tmp_dir/output"
+  if run_case "$1" "$2" 2> "$tmp_dir/error"; then
+    echo "Expected tag resolution to fail." >&2
+    exit 1
+  fi
+  if [ -s "$tmp_dir/output" ]; then
+    echo "Tag resolution wrote output on failure." >&2
+    cat "$tmp_dir/output" >&2
+    exit 1
+  fi
+
+  shift 2
+  printf '%s\n' "$@" > "$tmp_dir/expected_error"
+  diff -u "$tmp_dir/expected_error" "$tmp_dir/error"
+}
+
 : > "$tmp_dir/output"
 run_case "$version_tag" ""
 assert_output_contains "release_tag=$version_tag"
@@ -48,20 +65,21 @@ assert_output_contains "release_tag=$version_tag-r1"
 assert_output_contains "base_image_tag=$version_tag-base-r1"
 assert_output_contains "process_image_tag=$version_tag-process-r1"
 
-printf 'prefect-%s\n' "$version_tag" > "$tmp_dir/version"
-: > "$tmp_dir/revision"
-if (
-  cd "$tmp_dir"
-  IMAGE_REPOSITORY="$image_repository" \
-    GITHUB_OUTPUT="$tmp_dir/output" \
-    bash "$script_path"
-) 2> "$tmp_dir/error"; then
-  echo "Expected prefect-prefixed version to fail." >&2
-  exit 1
-fi
+assert_case_fails "prefect-$version_tag" "" \
+  "version must contain the Upstream Prefect Image Tag without a prefect- prefix."
 
-if ! grep -Fqx "version must contain the Upstream Prefect Image Tag without a prefect- prefix." "$tmp_dir/error"; then
-  echo "Expected prefect-prefixed version error was not found." >&2
-  cat "$tmp_dir/error" >&2
-  exit 1
-fi
+# A 120-character version produces a 128-character tag with the -process suffix.
+long_version_tag="$(printf '%0120d' 0)"
+run_case "$long_version_tag" ""
+assert_output_contains "process_image_tag=$long_version_tag-process"
+
+assert_case_fails "${long_version_tag}0" "" \
+  "process_image_tag exceeds 128 characters (129)."
+
+# With -r1, the base tag is 128 characters and only the process tag is too long.
+assert_case_fails "$long_version_tag" "r1" \
+  "process_image_tag exceeds 128 characters (131)."
+
+assert_case_fails "${long_version_tag}0" "r1" \
+  "base_image_tag exceeds 128 characters (129)." \
+  "process_image_tag exceeds 128 characters (132)."

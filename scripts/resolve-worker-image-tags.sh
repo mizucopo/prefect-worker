@@ -51,6 +51,19 @@ if [ -n "${revision}" ]; then
   process_image_tag="${process_image_tag}-${revision}"
 fi
 
+max_image_tag_length=128
+invalid_image_tag=false
+for tag_name in base_image_tag process_image_tag; do
+  tag="${!tag_name}"
+  if (( ${#tag} > max_image_tag_length )); then
+    printf '%s exceeds %d characters (%d).\n' "${tag_name}" "${max_image_tag_length}" "${#tag}" >&2
+    invalid_image_tag=true
+  fi
+done
+if [ "${invalid_image_tag}" = true ]; then
+  exit 1
+fi
+
 {
   echo "prefect_image_tag=${prefect_image_tag}"
   echo "revision=${revision}"
