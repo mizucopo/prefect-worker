@@ -1,0 +1,8 @@
+{
+  "local_workflows": [
+    ".github/workflows/check-worker-image-release.yml",
+    ".github/workflows/docker-quality-checks.yml",
+    ".github/workflows/release-worker-images.yml"
+  ],
+  "local_managed_keys": []
+}
