@@ -48,6 +48,7 @@
 | `use_gh_actions_docker_release` | `false` | 正しい。単一image向けの標準releaseは使わず、2種類のimmutableなWorker Imageを扱う固有workflowを保持する |
 | `use_gh_actions_docker_project_pipeline` | `false` | 採番コミット、タグ確定時点、重複検査と復旧の動作が現行と異なるため、共通 release を有効化しない |
 | `use_repo_template_policy` | `true` | 共通設定と workflow の逸脱を PR で検査する。既存運用に必要な workflow 3 本だけを完全パスで例外にする |
+| `repo_template_policy_ruleset_source` | `false` | 個人所有の採用先なので通常の PR チェックを維持する。組織 Ruleset 用のソースは生成しない |
 | `use_gh_actions_codeql` | `false` | 新設項目の既定値を採用する。CodeQL workflowの生成やGitHub側の設定変更は行わない |
 | `use_gh_actions_release` | `false` | 正しい。Docker image公開後にGitHub Releaseを作る固有workflowを使う |
 | `use_mit_license` | `true` | 正しい。MIT LICENSEを使用している |
@@ -60,6 +61,12 @@
 `repo_template_tauri_branding_assets_created: false` はCopierが管理する生成状態で、Tauriを使わないため既定値のまま保持します。廃止された `use_gh_actions_pr_tag_check` と旧runtime starter管理項目は、現行テンプレートの回答ファイルから削除されます。独自のtag検査workflowとWorker Imageの実装は削除しません。今回の更新では Repository Template Policy を有効にしました。Worker Image の公開に関する回答は変更しません。
 
 現在の `copier.yml` には、Shell runtime、テンプレート外のCI、Shell test、ドキュメント、デプロイを個別に表す回答項目はありません。これらは存在しない回答値を追加せず、リポジトリ固有のscript、workflow、READMEとして管理します。package managerも利用していないため、Python、Rust、Node.jsのruntime supportを有効化しません。
+
+## 共通ポリシーの強制範囲
+
+個人所有のこのリポジトリでは、`repo-template-policy` は差分を知らせる通常の PR チェックです。検査コードはベース側を使いますが、チェック名を必須にしても、ワークフロー定義の出所は固定されません。
+
+独立した書き込み権限のあるコード所有者と必須レビューを用意するまでは、初回導入と共通設定の変更を人が確認します。CI の結果だけで判断せず、ワークフロー、検査スクリプト、ポリシー、Copier の回答・適用コミットの差分を確認します。今回は CODEOWNERS、GitHub の管理設定、公開経路を変更しません。対応する構成は [repo-template の導入手順](https://github.com/mizucopo/repo-template/blob/main/docs/repo-template-policy-trust.md) を参照してください。
 
 ## テンプレート差分
 

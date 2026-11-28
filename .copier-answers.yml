@@ -1,4 +1,4 @@
-_commit: 0356ad6
+_commit: ff8812f
 _src_path: git@github.com:mizucopo/repo-template.git
 author_email: mizu.copo@gmail.com
 author_name: みず
@@ -7,6 +7,7 @@ docker_registry: mizucopo
 project_description: Prefect Process Work Pool向けWorker Dockerイメージ
 project_name: prefect-worker
 project_version: 3.8.2
+repo_template_policy_ruleset_source: false
 use_aws_ecr: false
 use_chrome_extension: false
 use_dependabot_docker: false
